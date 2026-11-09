@@ -1,0 +1,877 @@
+<title>Venus Cloud Blimp</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Saira+Semi+Condensed:wght@500;600;700&display=swap">
+<style>
+/* Layout: a flight console. The porthole view on top, a telemetry strip, the controls, then three instruments (profile, history, orbit). */
+:root{
+  --bg:#19120d;
+  --panel:#231912;
+  --panel-2:#2d2119;
+  --line:#3e2f23;
+  --fg:#f2e7d3;
+  --muted:#b29d82;
+  --sulfur:#e8c05a;
+  --band:#72d2bf;
+  --warn:#f08a4b;
+  --hud:rgba(25,18,13,.66);
+  --f-display:"Saira Semi Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
+  color-scheme:dark;
+}
+html,body{background:var(--bg);color:var(--fg)}
+body{
+  font-family:var(--f-body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:22px 48px;
+}
+.wrap{max-width:1240px;margin:0 auto;display:grid;gap:16px}
+h1,h2,h3{font-family:var(--f-display);font-weight:600;margin:0;text-wrap:balance;letter-spacing:.01em}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--sulfur)}
+header{display:flex;flex-wrap:wrap;gap:6px 24px;align-items:flex-end;justify-content:space-between}
+header .titles{display:grid;gap:2px;min-width:0}
+header h1{font-size:clamp(30px,4.4vw,44px);line-height:1.05}
+header p{margin:0;color:var(--muted);max-width:62ch}
+
+/* scene */
+.scene{position:relative;border-radius:14px;overflow:hidden;aspect-ratio:16/7;min-height:360px;max-width:100%;background:#2a1d14;border:1px solid var(--line)}
+.scene canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hud{position:absolute;background:var(--hud);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-radius:10px;padding:10px 14px;color:var(--fg)}
+.hud-tl{top:12px;left:12px}
+.hud-tr{top:12px;right:12px;text-align:right}
+.hud-bl{bottom:12px;left:12px;display:flex;gap:10px;align-items:center;padding:8px 12px}
+.hud-br{bottom:12px;right:12px;font-family:var(--f-mono);font-size:11px;color:var(--muted);padding:6px 10px}
+.hud .lbl{font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.big{font-family:var(--f-display);font-weight:600;font-size:clamp(38px,6vw,58px);line-height:1;font-variant-numeric:tabular-nums}
+.sub{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.mid{font-family:var(--f-display);font-weight:600;font-size:26px;line-height:1.1;font-variant-numeric:tabular-nums}
+.pill{font-family:var(--f-mono);font-size:12px;font-weight:500;padding:3px 10px;border-radius:999px;border:1px solid currentColor;white-space:nowrap}
+.pill.band{color:var(--band)}
+.pill.move{color:var(--sulfur)}
+.pill.warn{color:var(--warn)}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor;display:inline-block;margin-right:6px;vertical-align:1px}
+
+/* telemetry */
+.tele{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.cell{background:var(--panel);padding:10px 14px;display:grid;gap:2px;min-width:0}
+.cell .lbl{font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.cell .val{font-family:var(--f-display);font-size:24px;font-weight:600;line-height:1.15;font-variant-numeric:tabular-nums}
+.cell .sub{overflow-wrap:anywhere}
+.bar{height:6px;border-radius:3px;background:var(--panel-2);overflow:hidden;margin-top:4px}
+.bar i{display:block;height:100%;width:40%;background:var(--sulfur);border-radius:3px}
+
+/* controls */
+.controls{display:flex;flex-wrap:wrap;gap:14px 22px;align-items:flex-end;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.ctl{display:grid;gap:6px;min-width:0}
+.ctl > .lbl{font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+button{font:inherit;color:var(--fg);background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer;font-size:14px;touch-action:manipulation}
+button:hover:not(:disabled){border-color:var(--muted)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button:focus-visible,input:focus-visible{outline:2px solid var(--sulfur);outline-offset:2px}
+.seg{display:flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line);font-family:var(--f-mono);font-size:12px;padding:7px 10px;background:transparent}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--sulfur);color:#1d140c}
+#playBtn{min-width:86px}
+.target{display:flex;gap:10px;align-items:center}
+.target output{font-family:var(--f-display);font-weight:600;font-size:22px;min-width:68px;font-variant-numeric:tabular-nums;color:var(--band)}
+input[type=range]{width:180px;max-width:46vw;accent-color:var(--band)}
+.switch{display:flex;gap:8px;align-items:center;cursor:pointer;font-size:14px}
+.switch input{appearance:none;-webkit-appearance:none;width:38px;height:22px;border-radius:11px;background:var(--panel-2);border:1px solid var(--line);position:relative;cursor:pointer;margin:0;transition:background .15s}
+.switch input::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--muted);transition:transform .15s,background .15s}
+.switch input:checked{background:color-mix(in srgb,var(--band) 35%,var(--panel-2))}
+.switch input:checked::after{transform:translateX(16px);background:var(--band)}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.hold.active{background:var(--sulfur);color:#1d140c}
+
+/* instruments */
+.instruments{display:grid;grid-template-columns:1.05fr 1.45fr .9fr;gap:16px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:grid;gap:8px;grid-template-rows:auto 1fr auto;min-width:0}
+.panel h2{font-size:19px}
+.panel .head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.chart{position:relative;min-height:300px;max-width:100%}
+.chart canvas{position:absolute;inset:0;width:100%;height:100%}
+.globe-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px}
+.globe-stats div{display:grid}
+.globe-stats .lbl{font-family:var(--f-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.globe-stats b{font-family:var(--f-display);font-weight:600;font-size:20px;font-variant-numeric:tabular-nums}
+.cap{font-size:13px;color:var(--muted);margin:0}
+
+/* notes */
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;margin-top:6px}
+.note{display:grid;gap:4px;align-content:start;padding-top:12px;border-top:1px solid var(--line)}
+.note h3{font-size:17px;color:var(--sulfur)}
+.note p{margin:0;color:var(--muted);font-size:14px}
+.note b{color:var(--fg);font-weight:500}
+footer{font-size:12px;color:var(--muted);max-width:110ch;border-top:1px solid var(--line);padding-top:12px}
+
+@media (max-width:960px){.instruments{grid-template-columns:1fr 1fr}.instruments .panel:last-child{grid-column:1/-1}}
+@media (max-width:640px){
+  .instruments{grid-template-columns:1fr}
+  .scene{aspect-ratio:auto;height:440px}
+  .hud-tr{top:auto;bottom:56px;right:12px}
+  .hud-br{display:none}
+  .chart{min-height:260px}
+}
+@media (prefers-reduced-motion:reduce){.switch input,.switch input::after{transition:none}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="titles">
+      <span class="eyebrow">Venus · middle cloud deck · aerostat VA-01</span>
+      <h1>Venus Cloud Blimp</h1>
+      <p>A helium airship drifting on Venus's super-rotating winds. The autopilot reads the outside thermometer and pumps CO₂ ballast in or out to stay where the air is a comfortable 70°F.</p>
+    </div>
+  </header>
+
+  <section class="scene" id="sceneBox" aria-label="Live view of the blimp in the Venus clouds">
+    <canvas id="scene"></canvas>
+    <div class="hud hud-tl">
+      <div class="lbl">Outside air</div>
+      <div class="big" id="hudTemp">70.0°F</div>
+      <div class="sub" id="hudTempSub">target 70°F · Δ 0.0</div>
+    </div>
+    <div class="hud hud-tr">
+      <div class="lbl">Local solar time</div>
+      <div class="mid" id="hudTime">08:30</div>
+      <div class="sub" id="hudDay">daylight · 0.0 Earth days aloft</div>
+    </div>
+    <div class="hud hud-bl">
+      <span class="pill move" id="statusPill"><span class="dot"></span>Climbing</span>
+    </div>
+    <div class="hud hud-br">blimp drawn ~10× scale</div>
+  </section>
+
+  <section class="tele" aria-label="Telemetry">
+    <div class="cell"><span class="lbl">Altitude</span><span class="val" id="tAlt">–</span><span class="sub" id="tAltSub">–</span></div>
+    <div class="cell"><span class="lbl">Pressure</span><span class="val" id="tP">–</span><span class="sub" id="tPSub">–</span></div>
+    <div class="cell"><span class="lbl">Air density</span><span class="val" id="tRho">–</span><span class="sub">Earth sea level: 1.23</span></div>
+    <div class="cell"><span class="lbl">Wind</span><span class="val" id="tWind">–</span><span class="sub" id="tWindSub">–</span></div>
+    <div class="cell"><span class="lbl">Vertical speed</span><span class="val" id="tVz">–</span><span class="sub" id="tVzSub">–</span></div>
+    <div class="cell"><span class="lbl">CO₂ ballast</span><span class="val" id="tB">–</span><div class="bar"><i id="tBBar"></i></div><span class="sub" id="tBSub">–</span></div>
+  </section>
+
+  <section class="controls" aria-label="Controls">
+    <div class="ctl">
+      <span class="lbl">Sim</span>
+      <button id="playBtn" type="button">Pause</button>
+    </div>
+    <div class="ctl">
+      <span class="lbl">Time speed</span>
+      <div class="seg" id="speedSeg" role="group" aria-label="Time speed">
+        <button type="button" data-speed="1">1×</button>
+        <button type="button" data-speed="10">10×</button>
+        <button type="button" data-speed="60">1 min/s</button>
+        <button type="button" data-speed="600">10 min/s</button>
+        <button type="button" data-speed="3600">1 h/s</button>
+        <button type="button" data-speed="14400">4 h/s</button>
+      </div>
+    </div>
+    <div class="ctl">
+      <label class="lbl" for="target">Target temperature</label>
+      <div class="target">
+        <input type="range" id="target" min="40" max="105" step="1" value="70">
+        <output id="targetOut" for="target">70°F</output>
+        <button type="button" id="reset70">70°F</button>
+      </div>
+    </div>
+    <div class="ctl">
+      <span class="lbl">Altitude control</span>
+      <label class="switch"><input type="checkbox" id="auto" checked> Autopilot</label>
+    </div>
+    <div class="ctl">
+      <span class="lbl">Manual ballast (hold)</span>
+      <div class="row">
+        <button type="button" class="hold" id="pumpBtn" disabled>Pump in CO₂ ↓</button>
+        <button type="button" class="hold" id="ventBtn" disabled>Vent CO₂ ↑</button>
+      </div>
+    </div>
+    <div class="ctl">
+      <span class="lbl">Weather</span>
+      <div class="row">
+        <label class="switch"><input type="checkbox" id="weather" checked> Convection &amp; waves</label>
+        <button type="button" id="gustBtn">Trigger downdraft</button>
+      </div>
+    </div>
+    <div class="ctl">
+      <span class="lbl">Units</span>
+      <div class="seg" id="unitSeg" role="group" aria-label="Temperature units">
+        <button type="button" data-unit="F" aria-pressed="true">°F</button>
+        <button type="button" data-unit="C" aria-pressed="false">°C</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="instruments">
+    <div class="panel">
+      <div class="head"><h2>Where 70°F lives</h2><span class="sub" id="isoLbl">–</span></div>
+      <div class="chart"><canvas id="profile" aria-label="Venus temperature versus altitude with the blimp's position"></canvas></div>
+      <p class="cap">Temperature falls about 9° C per km through the middle cloud. The dashed line is your target; the bright curve shifts with sunlight and atmospheric waves.</p>
+    </div>
+    <div class="panel">
+      <div class="head"><h2>Flight log</h2><span class="sub" id="bandStat">–</span></div>
+      <div class="chart"><canvas id="history" aria-label="Recent outside temperature and altitude"></canvas></div>
+      <p class="cap" id="histCap">Shaded band is ±2°F around the target.</p>
+    </div>
+    <div class="panel">
+      <div class="head"><h2>Around the planet</h2><span class="sub">view from above north pole</span></div>
+      <div class="chart" style="min-height:230px"><canvas id="globe" aria-label="Blimp position around Venus relative to the Sun"></canvas></div>
+      <div class="globe-stats">
+        <div><span class="lbl">Laps</span><b id="gLaps">0.00</b></div>
+        <div><span class="lbl">One lap takes</span><b id="gLap">–</b></div>
+        <div><span class="lbl">Next sunrise</span><b id="gSun">–</b></div>
+        <div><span class="lbl">Sunrise in the</span><b>west</b></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="notes">
+    <div class="note"><h3>Why about 56 km up</h3><p>Venus's surface is 465°C under 92 bar of CO₂. Climb into the clouds and it cools steadily. Near <b>55–56 km</b> the air is about <b>21°C and 0.5 bar</b>, roughly the pressure at the top of Kilimanjaro.</p></div>
+    <div class="note"><h3>Riding the wind</h3><p>The upper atmosphere super-rotates. At this altitude the wind runs about <b>60 m/s westward</b>, so the blimp circles the planet in about a week and the Sun rises in the west.</p></div>
+    <div class="note"><h3>How it holds altitude</h3><p>The helium envelope is sealed and rigid-pressure, so its lift depends only on outside air density. To sink, a compressor packs <b>CO₂ from outside</b> into a tank. To rise, it vents some back out.</p></div>
+    <div class="note"><h3>It has been done</h3><p>In 1985 the Soviet <b>VEGA 1 and 2</b> balloons floated near 54 km for about two days each, measuring winds and turbulence on the way.</p></div>
+    <div class="note"><h3>Air is a lifting gas</h3><p>Earth air (29 g/mol) is lighter than Venus's CO₂ (43 g/mol). A habitat full of breathable air would float, with about 40% of helium's lift.</p></div>
+  </section>
+
+  <footer>Model: temperatures follow an approximate Venus International Reference Atmosphere (VIRA) profile with a hydrostatic pressure column (92.1 bar at the surface). Day/night tides add up to about 2 K near the cloud tops, gravity waves about 1 K, and convective updrafts are strongest near 52 km. Blimp: 5,000 m³ helium envelope, 2,650 kg dry mass, up to 2,500 kg CO₂ ballast, compressor 3 kg/s in, 6 kg/s vent. Vertical motion includes buoyancy, added mass and drag. Horizontally the blimp drifts with the wind. Equatorial track. A simulation for intuition, not mission design.</footer>
+</div>
+
+<script>
+(() => {
+"use strict";
+// CORE-START ---------------------------------------------------------------
+const R_V = 6051.8e3, MOLAR = 0.04345, RG = 8.314462, G0 = 8.87;
+const V_ENV = 5000, M_DRY = 2650, M_HE = 450, B_MAX = 2500, PUMP_IN = 3, PUMP_OUT = 6;
+const CD = 0.6, A_TOP = 560, ADDED = 0.8;
+const LAPSE = 8.5, H_RHO = 7800, KD = 60, TAU_B = 15; // autopilot tuning
+const SOLAR_DRIFT = 3.77; // m/s, surface motion relative to the Sun (116.75-day solar day)
+
+// approximate VIRA equatorial temperature profile [km, K]
+const TPTS = [[0,735.3],[5,696.8],[10,658.2],[15,620.8],[20,580.7],[25,539.2],[30,496.9],[35,455.5],
+  [40,417.6],[45,385.4],[50,350.5],[52,331.0],[54,312.0],[55,302.3],[56,293.0],[58,276.0],[60,262.8],
+  [62,254.5],[65,243.2],[70,229.8],[75,215.0],[80,196.6],[85,182.0],[90,170.3],[100,175.4]];
+// zonal (westward) wind [km, m/s]
+const UPTS = [[0,0.5],[10,6],[20,22],[30,38],[40,50],[45,55],[50,58],[55,61],[58,66],[60,72],[65,90],[70,100],[80,100]];
+
+function interp(pts, x){
+  if (x <= pts[0][0]) return pts[0][1];
+  for (let i = 1; i < pts.length; i++){
+    if (x <= pts[i][0]){ const a = pts[i-1], b = pts[i]; return a[1] + (b[1]-a[1])*(x-a[0])/(b[0]-a[0]); }
+  }
+  return pts[pts.length-1][1];
+}
+const clamp = (x, a, b) => x < a ? a : x > b ? b : x;
+const Tbase = zkm => interp(TPTS, zkm);
+const windU = zkm => interp(UPTS, zkm);
+const gAt = zm => { const r = R_V/(R_V+zm); return G0*r*r; };
+
+const LNP = new Float64Array(1001); // ln(Pa) every 0.1 km
+(function(){
+  let lnp = Math.log(92.10e5); LNP[0] = lnp;
+  for (let i = 1; i <= 10000; i++){
+    const zm = (i-0.5)*10;
+    lnp -= MOLAR*gAt(zm)/(RG*Tbase(zm/1000))*10;
+    if (i % 10 === 0) LNP[i/10] = lnp;
+  }
+})();
+function Pbase(zkm){
+  const x = clamp(zkm*10, 0, 1000); const i = Math.min(999, Math.floor(x)); const f = x - i;
+  return Math.exp(LNP[i] + (LNP[i+1]-LNP[i])*f);
+}
+// temperature perturbation: thermal tides + gravity wave
+function dT(zkm, t, lt, weather){
+  const h = (lt-12)/24*2*Math.PI;
+  const A = 2.4*Math.exp(-(((zkm-61)/6)**2));
+  let d = A*(0.6*Math.cos(h) + 0.4*Math.cos(2*h));
+  if (weather) d += 0.9*Math.sin(2*Math.PI*t/5400 - zkm*2*Math.PI/7)*Math.exp(-(((zkm-57)/8)**2));
+  return d;
+}
+const convEnv = zkm => 0.2 + Math.exp(-(((zkm-52.5)/2)**2));
+function gauss(){ let u = 0; while (u === 0) u = Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*Math.random()); }
+const F2K = f => (f-32)*5/9 + 273.15;
+const K2F = k => (k-273.15)*9/5 + 32;
+
+function ambient(s, zkm){ return Tbase(zkm) + dT(zkm, s.t, s.lt, s.weather); }
+function rhoAt(s, zkm){ return Pbase(zkm)*MOLAR/(RG*ambient(s, zkm)); }
+
+function makeState(z0, lt0){
+  const s = { t:0, z:z0, v:0, b:0, bdot:0, wn:0, w:0, lt:lt0, laps:0, auto:true, manual:0, weather:true,
+    targetF:70, event:null, inBand:0, total:0, sat:null, T:0, P:0, rho:0, u:0, lift:0 };
+  s.b = clamp(rhoAt(s, z0/1000)*V_ENV - M_DRY - M_HE, 0, B_MAX); // start trimmed
+  return s;
+}
+function step(s, dt){
+  const zkm = s.z/1000;
+  const T = ambient(s, zkm), P = Pbase(zkm), rho = P*MOLAR/(RG*T), g = gAt(s.z);
+  // vertical air motion: Ornstein-Uhlenbeck convection, strongest near 52 km
+  if (s.weather){ const tau = 90; s.wn += (-s.wn/tau)*dt + Math.sqrt(2*dt/tau)*gauss(); }
+  else s.wn *= Math.max(0, 1 - dt/30);
+  let w = s.wn*1.3*convEnv(zkm);
+  if (s.event){
+    const k = (s.t - s.event.t0)/s.event.dur;
+    if (k >= 1) s.event = null; else if (k >= 0) w += s.event.amp*Math.sin(Math.PI*k);
+  }
+  s.w = w;
+  const m = M_DRY + M_HE + s.b, mEff = m + ADDED*rho*V_ENV;
+  const vr = s.v - w;
+  const F = (rho*V_ENV - m)*g - 0.5*rho*CD*A_TOP*Math.abs(vr)*vr;
+  s.v += F/mEff*dt; s.z += s.v*dt;
+  // ballast control
+  let bdot = 0; const targetK = F2K(s.targetF);
+  if (s.auto){
+    const dz = clamp((T - targetK)/LAPSE*1000, -1500, 1500);      // too hot -> climb
+    const bCmd = rho*Math.exp(-dz/H_RHO)*V_ENV - M_DRY - M_HE + KD*s.v; // trim for target + damping
+    bdot = clamp((bCmd - s.b)/TAU_B, -PUMP_OUT, PUMP_IN);
+    s.sat = (s.b <= 1 && bCmd < 0) ? 'light' : (s.b >= B_MAX-1 && bCmd > B_MAX) ? 'heavy' : null;
+  } else {
+    bdot = s.manual > 0 ? PUMP_IN : s.manual < 0 ? -PUMP_OUT : 0;
+    s.sat = null;
+  }
+  const nb = clamp(s.b + bdot*dt, 0, B_MAX); s.bdot = (nb - s.b)/dt; s.b = nb;
+  // horizontal drift with the super-rotation
+  const u = windU(zkm), circ = 2*Math.PI*(R_V + s.z);
+  s.lt = (s.lt + (u + SOLAR_DRIFT)/circ*24*dt) % 24;
+  s.laps += u/circ*dt;
+  s.t += dt;
+  s.T = T; s.P = P; s.rho = rho; s.u = u; s.lift = rho*V_ENV - m;
+  if (Math.abs(T - targetK) < 10/9) s.inBand += dt;
+  s.total += dt;
+}
+function isothermAlt(s, K){
+  // scan down from 70 km for the first crossing
+  let prev = ambient(s, 70), z = 70;
+  for (let zz = 69.98; zz >= 40; zz -= 0.02){
+    const T = ambient(s, zz);
+    if ((prev - K)*(T - K) <= 0){ return zz + 0.02*(T - K)/(T - prev); }
+    prev = T; z = zz;
+  }
+  return null;
+}
+// CORE-END -----------------------------------------------------------------
+
+// ---------- state ----------
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let S = makeState(55250, 8.5);
+let speed = 60, running = !reduceMotion, unit = 'F';
+const HIST_DT = 5, HIST_N = Math.ceil(7*86400/HIST_DT);
+const hT = new Float32Array(HIST_N), hZ = new Float32Array(HIST_N), hTarget = new Float32Array(HIST_N);
+let hHead = 0, hCount = 0, hNext = 0;
+const trail = [];
+function pushHist(){
+  hT[hHead] = S.T; hZ[hHead] = S.z; hTarget[hHead] = F2K(S.targetF);
+  hHead = (hHead + 1) % HIST_N; if (hCount < HIST_N) hCount++;
+}
+
+// ---------- helpers ----------
+const $ = id => document.getElementById(id);
+const css = getComputedStyle(document.documentElement);
+const tok = n => css.getPropertyValue(n).trim();
+const C = { fg:tok('--fg'), muted:tok('--muted'), line:tok('--line'), sulfur:tok('--sulfur'), band:tok('--band'), warn:tok('--warn'), panel:tok('--panel'), panel2:tok('--panel-2') };
+const FONT_MONO = 'IBM Plex Mono, ui-monospace, Consolas, monospace';
+const FONT_DISP = 'Saira Semi Condensed, Arial Narrow, sans-serif';
+const tU = k => unit === 'F' ? K2F(k) : k - 273.15;
+const fmtT = (k, d=1) => tU(k).toFixed(d) + (unit === 'F' ? '°F' : '°C');
+const fmtTarget = f => unit === 'F' ? `${f}°F` : `${((f-32)*5/9).toFixed(1)}°C`;
+const smooth = (a, b, x) => { const t = clamp((x-a)/(b-a), 0, 1); return t*t*(3-2*t); };
+const mix = (a, b, t) => [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
+const rgb = (c, a=1) => `rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
+const hourAngle = lt => (lt-12)/24*2*Math.PI;
+const daylight = lt => smooth(-0.12, 0.35, Math.cos(hourAngle(lt)));
+const fmtHM = h => { const hh = Math.floor(h), mm = Math.floor((h-hh)*60); return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`; };
+function fmtDur(sec){
+  if (sec < 3600) return `${Math.round(sec/60)} min`;
+  if (sec < 86400*2) return `${(sec/3600).toFixed(1)} h`;
+  return `${(sec/86400).toFixed(1)} days`;
+}
+
+function fitCanvas(cv){
+  const r = cv.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
+  const w = Math.max(10, Math.round(r.width)), h = Math.max(10, Math.round(r.height));
+  if (cv.width !== Math.round(w*dpr) || cv.height !== Math.round(h*dpr)){ cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr); }
+  const ctx = cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  cv._w = w; cv._h = h; return ctx;
+}
+const sceneCv = $('scene'), profCv = $('profile'), histCv = $('history'), globeCv = $('globe');
+let sctx = fitCanvas(sceneCv), pctx = fitCanvas(profCv), hctx = fitCanvas(histCv), gctx = fitCanvas(globeCv);
+new ResizeObserver(() => { sctx = fitCanvas(sceneCv); pctx = fitCanvas(profCv); hctx = fitCanvas(histCv); gctx = fitCanvas(globeCv); drawAllPanels(); drawScene(0); })
+  .observe(document.body);
+
+// ---------- scene assets ----------
+function makeSprite(seed, col){
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 128;
+  const c = cv.getContext('2d'); let r = seed;
+  const rnd = () => (r = (r*16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 9; i++){
+    const x = 50 + rnd()*156, y = 50 + rnd()*30, rad = 22 + rnd()*30;
+    const g = c.createRadialGradient(x, y, 0, x, y, rad);
+    g.addColorStop(0, rgb(col, .55)); g.addColorStop(.6, rgb(col, .25)); g.addColorStop(1, rgb(col, 0));
+    c.fillStyle = g; c.beginPath(); c.arc(x, y, rad, 0, Math.PI*2); c.fill();
+  }
+  return cv;
+}
+const SPR_L = [1,2,3,4].map(i => makeSprite(i*7919, [252,244,226]));
+const SPR_D = [1,2,3,4].map(i => makeSprite(i*7919, [176,138,88]));
+const clouds = [];
+(function(){
+  for (let i = 0; i < 420; i++){
+    const z = 46000 + Math.random()*20000;
+    clouds.push({ x:(Math.random()-0.5)*6000, z, rx:250 + Math.random()*900, ry:60 + Math.random()*200,
+      p:0.65 + Math.random()*0.8, a:0.5 + Math.random()*0.5, s:i % 4, ph:Math.random()*6.28, dv:(Math.random()-0.5)*3 });
+  }
+  clouds.sort((a, b) => a.p - b.p);
+})();
+function layerDensity(zkm){
+  if (zkm < 47.5) return 0.35;
+  if (zkm < 50.5) return 0.95;
+  if (zkm < 56.5) return 0.6 - 0.25*smooth(55.5, 56.5, zkm);
+  if (zkm < 70) return 0.28*(1 - smooth(62, 70, zkm));
+  return 0.02;
+}
+const SKY = [[44,[128,74,38]],[47.5,[170,110,58]],[50.5,[214,172,108]],[54,[232,206,150]],[56.5,[236,204,140]],[58,[228,182,112]],[63,[214,152,82]],[70,[188,118,58]]];
+function skyAt(zkm){
+  if (zkm <= SKY[0][0]) return SKY[0][1];
+  for (let i = 1; i < SKY.length; i++) if (zkm <= SKY[i][0]){ const a = SKY[i-1], b = SKY[i]; return mix(a[1], b[1], (zkm-a[0])/(b[0]-a[0])); }
+  return SKY[SKY.length-1][1];
+}
+const FOG = [244,232,204];
+function lightColor(d){
+  const night = [46,34,50], twi = [222,146,96], day = [255,250,242];
+  return d < 0.5 ? mix(night, twi, d*2) : mix(twi, day, (d-0.5)*2);
+}
+const particles = [];
+let camZ = S.z/1000, lastBlink = 0;
+
+function roundRect(c, x, y, w, h, r){
+  c.beginPath(); c.moveTo(x+r, y); c.arcTo(x+w, y, x+w, y+h, r); c.arcTo(x+w, y+h, x, y+h, r); c.arcTo(x, y+h, x, y, r); c.arcTo(x, y, x+w, y, r); c.closePath();
+}
+function drawBlimp(c, L, pass, d, now){
+  const a = L/2, b = L/7.2;
+  const gw = a*0.56, gh = b*0.42, gy = b*0.98;
+  if (pass === 'body'){
+    c.fillStyle = '#8c8475';
+    c.beginPath(); c.moveTo(-a*0.55,-b*0.72); c.lineTo(-a*0.94,-b*1.6); c.lineTo(-a*1.04,-b*1.55); c.lineTo(-a*0.99,-b*0.22); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(-a*0.55, b*0.72); c.lineTo(-a*0.94, b*1.6); c.lineTo(-a*1.04, b*1.55); c.lineTo(-a*0.99, b*0.22); c.closePath(); c.fill();
+    // struts
+    c.strokeStyle = '#6d6457'; c.lineWidth = Math.max(1, L/260);
+    c.beginPath(); c.moveTo(-gw*0.3, b*0.9); c.lineTo(-gw*0.25, gy+2); c.moveTo(gw*0.3, b*0.9); c.lineTo(gw*0.25, gy+2); c.stroke();
+    // envelope
+    const gr = c.createLinearGradient(0, -b, 0, b);
+    gr.addColorStop(0, '#fcf9f2'); gr.addColorStop(.45, '#e7e0d1'); gr.addColorStop(1, '#978c79');
+    c.fillStyle = gr; c.beginPath(); c.ellipse(0, 0, a, b, 0, 0, Math.PI*2); c.fill();
+    c.save(); c.clip();
+    const gr2 = c.createLinearGradient(0, 0, 0, b);
+    gr2.addColorStop(0, 'rgba(232,186,96,0)'); gr2.addColorStop(1, 'rgba(232,180,90,.38)');
+    c.fillStyle = gr2; c.fillRect(-a, 0, 2*a, b);
+    c.fillStyle = '#2f4266'; c.beginPath(); c.ellipse(-a*0.05, -b*1.02, a*0.58, b*0.26, 0, 0, Math.PI*2); c.fill();
+    c.strokeStyle = 'rgba(160,190,230,.35)'; c.lineWidth = 1;
+    for (let k = -4; k <= 4; k++){ c.beginPath(); c.moveTo(-a*0.05 + k*a*0.12, -b); c.lineTo(-a*0.05 + k*a*0.12, -b*0.78); c.stroke(); }
+    c.fillStyle = '#d8893c'; c.fillRect(a*0.52, -b, a*0.055, 2*b);
+    c.strokeStyle = 'rgba(90,78,62,.22)';
+    for (let k = -3; k <= 3; k++){ const x = k*a/4.2; const hh = b*Math.sqrt(1 - (x/a)**2); c.beginPath(); c.ellipse(x, 0, a*0.05, hh, 0, -Math.PI/2, Math.PI/2); c.stroke(); }
+    c.restore();
+    c.fillStyle = '#7a7266';
+    c.beginPath(); c.moveTo(-a*0.6, -b*0.06); c.lineTo(-a*1.07, -b*0.13); c.lineTo(-a*1.07, b*0.13); c.lineTo(-a*0.6, b*0.1); c.closePath(); c.fill();
+    c.fillStyle = 'rgba(80,62,44,.75)'; c.font = `600 ${Math.max(10, b*0.36)}px ${FONT_DISP}`; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('VA-01', a*0.15, b*0.2);
+    // gondola
+    const gg = c.createLinearGradient(0, gy, 0, gy+gh);
+    gg.addColorStop(0, '#e2dbcc'); gg.addColorStop(1, '#8e8574');
+    c.fillStyle = gg; roundRect(c, -gw/2, gy, gw, gh, gh*0.45); c.fill();
+    c.fillStyle = '#3b332c';
+    for (let k = 0; k < 6; k++) c.fillRect(-gw*0.36 + k*gw*0.13, gy + gh*0.28, gw*0.08, gh*0.3);
+    // propellers
+    const spin = now*0.03;
+    for (const sx of [-1, 1]){
+      const px = sx*(gw/2 + gh*0.35), py = gy + gh*0.5;
+      c.fillStyle = '#5b544b'; c.beginPath(); c.arc(px, py, gh*0.12, 0, Math.PI*2); c.fill();
+      c.fillStyle = `rgba(70,62,54,${0.25 + 0.1*Math.sin(spin + sx)})`;
+      c.beginPath(); c.ellipse(px, py, gh*0.1, gh*0.85, 0, 0, Math.PI*2); c.fill();
+    }
+  } else {
+    const glow = 0.18 + 0.7*(1-d);
+    c.fillStyle = `rgba(255,204,128,${glow})`;
+    for (let k = 0; k < 6; k++) c.fillRect(-gw*0.36 + k*gw*0.13, gy + gh*0.28, gw*0.08, gh*0.3);
+    const blink = (now % 1400) < 90;
+    if (blink){ halo(c, -a*0.95, -b*1.6, b*0.5, [255,255,255], 0.9); }
+    const red = 0.5 + 0.5*Math.sin(now/300);
+    halo(c, 0, gy + gh, b*0.3, [255,70,50], 0.35 + 0.5*red*(1-d*0.5));
+    halo(c, a*0.98, 0, b*0.22, [120,255,140], 0.5*(1-d*0.6));
+  }
+}
+function halo(c, x, y, r, col, a){
+  const g = c.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, rgb(col, a)); g.addColorStop(.25, rgb(col, a*0.6)); g.addColorStop(1, rgb(col, 0));
+  c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, Math.PI*2); c.fill();
+}
+
+function drawScene(dtReal){
+  const c = sctx, W = sceneCv._w, H = sceneCv._h; if (!W) return;
+  const now = performance.now();
+  const zb = S.z/1000;
+  camZ += (zb - camZ)*Math.min(1, dtReal*2.5 + (dtReal === 0 ? 1 : 0));
+  const SPAN = 1.6, pxKm = H/SPAN, pxM_h = W/3000;
+  const yOf = zkm => H/2 - (zkm - camZ)*pxKm;
+  const zOf = y => camZ + (H/2 - y)/pxKm;
+  const d = daylight(S.lt);
+
+  // sky + in-cloud haze
+  const g = c.createLinearGradient(0, 0, 0, H);
+  for (let i = 0; i <= 8; i++){ const z = zOf(H*i/8); g.addColorStop(i/8, rgb(mix(skyAt(z), FOG, layerDensity(z)*0.6))); }
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+
+  // the Sun, diffused through the cloud above (rises in the west = left)
+  if (d > 0.02){
+    const h = hourAngle(S.lt);
+    const sx = W*(0.5 + 0.46*Math.sin(h)), sy = H*(0.95 - 0.85*Math.max(0, Math.cos(h)));
+    const vis = (0.3 + 0.6*smooth(55.5, 60, camZ))*d;
+    halo(c, sx, sy, Math.max(W, H)*0.45, [255,240,205], 0.55*vis);
+    halo(c, sx, sy, Math.min(W, H)*0.07, [255,252,236], 0.9*vis*smooth(55.8, 58, camZ) + 0.2*vis);
+  }
+
+  // clouds: drift relative to the blimp (it moves with the wind)
+  const vis = Math.min(speed, 30)*dtReal;
+  const uB = windU(zb);
+  const drawCloud = cl => {
+    const y = yOf(cl.z/1000), hpx = cl.ry*2*pxKm/1000*cl.p, wpx = cl.rx*2*pxM_h*cl.p;
+    if (y + hpx < 0 || y - hpx > H) return;
+    const x = W/2 + cl.x*pxM_h*cl.p;
+    const a = cl.a*layerDensity(cl.z/1000)*(0.8 + 0.2*Math.sin(cl.ph + S.t/700));
+    c.globalAlpha = a*0.55; c.drawImage(SPR_D[cl.s], x - wpx/2, y - hpx/2 + hpx*0.18, wpx, hpx);
+    c.globalAlpha = a; c.drawImage(SPR_L[cl.s], x - wpx/2, y - hpx/2, wpx, hpx);
+  };
+  const HALF = 3000;
+  for (const cl of clouds){
+    cl.x -= ((windU(cl.z/1000) - uB) + cl.dv)*vis;
+    if (cl.x < -HALF) cl.x += 2*HALF; else if (cl.x > HALF) cl.x -= 2*HALF;
+  }
+  let i = 0;
+  for (; i < clouds.length && clouds[i].p < 1.15; i++) drawCloud(clouds[i]);
+
+  // blimp
+  const L = Math.min(W*0.34, 300, H*0.62);
+  const bx = W/2, by = yOf(zb);
+  const tilt = clamp(S.v*0.06, -0.12, 0.12);
+  c.globalAlpha = 1;
+  c.save(); c.translate(bx, by); c.rotate(-tilt);
+  drawBlimp(c, L, 'body', d, now);
+  // ballast particles (vent plume up top, intake swirl under the gondola)
+  if (running && !reduceMotion){
+    const rate = Math.abs(S.bdot)/PUMP_OUT;
+    if (Math.random() < rate*dtReal*40){
+      if (S.bdot < 0) particles.push({ x:L*0.06, y:-L/7.2, vx:(Math.random()-0.5)*14, vy:-26 - Math.random()*20, life:1, r:3, k:'vent' });
+      else particles.push({ x:L*0.2 + Math.cos(now)*20, y:L/7.2*1.55 + 18, vx:-30, vy:-14, life:1, r:1.6, k:'in' });
+    }
+  }
+  for (let j = particles.length - 1; j >= 0; j--){
+    const p = particles[j];
+    p.x += p.vx*dtReal; p.y += p.vy*dtReal; p.life -= dtReal*(p.k === 'vent' ? 0.5 : 1.4);
+    if (p.k === 'vent') p.r += dtReal*9;
+    if (p.life <= 0){ particles.splice(j, 1); continue; }
+    c.fillStyle = p.k === 'vent' ? `rgba(255,250,235,${p.life*0.45})` : `rgba(150,110,50,${p.life*0.7})`;
+    c.beginPath(); c.arc(p.x, p.y, p.r, 0, Math.PI*2); c.fill();
+  }
+  c.restore();
+
+  for (; i < clouds.length; i++) drawCloud(clouds[i]);
+  c.globalAlpha = 1;
+
+  // global lighting (day / twilight / night)
+  c.globalCompositeOperation = 'multiply';
+  c.fillStyle = rgb(lightColor(d)); c.fillRect(0, 0, W, H);
+  c.globalCompositeOperation = 'source-over';
+
+  // emissive lights
+  c.save(); c.translate(bx, by); c.rotate(-tilt); drawBlimp(c, L, 'glow', d, now); c.restore();
+
+  // target isotherm band
+  const tK = F2K(S.targetF);
+  const zi = isothermAlt(S, tK);
+  if (zi !== null){
+    const y = yOf(zi), dy = (10/9)/LAPSE*pxKm;
+    c.fillStyle = 'rgba(114,210,191,.13)'; c.fillRect(0, y - dy, W, 2*dy);
+    c.strokeStyle = 'rgba(114,210,191,.9)'; c.lineWidth = 1.5; c.setLineDash([8, 6]);
+    c.beginPath(); c.moveTo(56, y); c.lineTo(W, y); c.stroke(); c.setLineDash([]);
+    c.font = `500 12px ${FONT_MONO}`; c.textAlign = 'right'; c.textBaseline = 'bottom';
+    const lbl = `${fmtTarget(S.targetF)} isotherm · ${zi.toFixed(2)} km`;
+    const tw = c.measureText(lbl).width;
+    c.fillStyle = 'rgba(25,18,13,.6)'; c.fillRect(W - tw - 22, y - 22, tw + 12, 18);
+    c.fillStyle = '#a6f0e0'; c.fillText(lbl, W - 16, y - 7);
+  }
+  // altitude ladder
+  c.fillStyle = 'rgba(25,18,13,.45)'; c.fillRect(0, 0, 52, H);
+  c.font = `500 11px ${FONT_MONO}`; c.textAlign = 'left'; c.textBaseline = 'middle';
+  const z0 = Math.floor(zOf(H)*10)/10;
+  for (let z = z0; z <= zOf(0) + 0.1; z += 0.1){
+    const zz = Math.round(z*10)/10, y = yOf(zz); const major = Math.abs(zz*2 - Math.round(zz*2)) < 1e-6;
+    c.strokeStyle = major ? 'rgba(242,231,211,.8)' : 'rgba(242,231,211,.4)';
+    c.beginPath(); c.moveTo(major ? 36 : 44, y); c.lineTo(52, y); c.stroke();
+    if (major){ c.fillStyle = 'rgba(242,231,211,.85)'; c.fillText(zz.toFixed(1), 4, y); }
+  }
+  c.fillStyle = 'rgba(242,231,211,.6)'; c.fillText('km', 4, 12);
+  // blimp marker on ladder
+  c.fillStyle = C.sulfur; c.beginPath(); c.moveTo(52, by); c.lineTo(60, by - 5); c.lineTo(60, by + 5); c.closePath(); c.fill();
+}
+
+// ---------- profile chart ----------
+function drawProfile(){
+  const c = pctx, W = profCv._w, H = profCv._h; if (!W) return;
+  c.clearRect(0, 0, W, H);
+  const pad = { l:40, r:54, t:10, b:34 };
+  const zmin = 44, zmax = 68, kmin = F2K(-40), kmax = F2K(260);
+  const X = k => pad.l + (k - kmin)/(kmax - kmin)*(W - pad.l - pad.r);
+  const Y = z => pad.t + (zmax - z)/(zmax - zmin)*(H - pad.t - pad.b);
+  // cloud layers
+  const layers = [[47.5,50.5,'Lower cloud',.10],[50.5,56.5,'Middle cloud',.075],[56.5,68,'Upper cloud',.04]];
+  c.font = `500 10px ${FONT_MONO}`; c.textBaseline = 'top'; c.textAlign = 'right';
+  for (const [z0, z1, name, a] of layers){
+    c.fillStyle = `rgba(232,192,90,${a})`; c.fillRect(pad.l, Y(z1), W - pad.l - pad.r, Y(z0) - Y(z1));
+    c.fillStyle = C.muted; c.fillText(name.toUpperCase(), W - pad.r - 4, Y(z1) + 4);
+  }
+  // grid + axes
+  c.strokeStyle = C.line; c.lineWidth = 1; c.textBaseline = 'middle';
+  c.font = `400 11px ${FONT_MONO}`;
+  for (let z = 44; z <= 68; z += 4){
+    const y = Y(z); c.beginPath(); c.moveTo(pad.l, y); c.lineTo(W - pad.r, y); c.stroke();
+    c.fillStyle = C.muted; c.textAlign = 'right'; c.fillText(z, pad.l - 6, y);
+    c.textAlign = 'left'; const p = Pbase(z)/1e5; c.fillText(p >= 1 ? p.toFixed(1) + ' bar' : p.toFixed(2) + ' bar', W - pad.r + 6, y);
+  }
+  const ticks = unit === 'F' ? [0, 50, 100, 150, 200, 250] : [-25, 0, 25, 50, 75, 100, 125];
+  c.textAlign = 'center'; c.textBaseline = 'top';
+  for (const t of ticks){
+    const k = unit === 'F' ? F2K(t) : t + 273.15; const x = X(k);
+    c.strokeStyle = C.line; c.beginPath(); c.moveTo(x, pad.t); c.lineTo(x, H - pad.b); c.stroke();
+    c.fillStyle = C.muted; c.fillText(t + '°', x, H - pad.b + 5);
+  }
+  c.textAlign = 'left'; c.fillText(`outside air (${unit === 'F' ? '°F' : '°C'}) →`, pad.l, H - 14);
+  c.save(); c.translate(11, pad.t + 2); c.textAlign = 'left'; c.textBaseline = 'top'; c.fillText('km', 0, 0); c.restore();
+  // target band
+  const tK = F2K(S.targetF), bw = 10/9;
+  c.fillStyle = 'rgba(114,210,191,.14)'; c.fillRect(X(tK - bw), pad.t, X(tK + bw) - X(tK - bw), H - pad.t - pad.b);
+  c.strokeStyle = C.band; c.setLineDash([5, 4]); c.beginPath(); c.moveTo(X(tK), pad.t); c.lineTo(X(tK), H - pad.b); c.stroke(); c.setLineDash([]);
+  // profiles
+  c.save(); c.beginPath(); c.rect(pad.l, pad.t, W - pad.l - pad.r, H - pad.t - pad.b); c.clip();
+  c.strokeStyle = 'rgba(178,157,130,.55)'; c.lineWidth = 1.2; c.beginPath();
+  for (let z = zmin; z <= zmax + 1e-6; z += 0.1){ const x = X(Tbase(z)), y = Y(z); z === zmin ? c.moveTo(x, y) : c.lineTo(x, y); }
+  c.stroke();
+  c.strokeStyle = C.sulfur; c.lineWidth = 2; c.beginPath();
+  for (let z = zmin; z <= zmax + 1e-6; z += 0.1){ const x = X(ambient(S, z)), y = Y(z); z === zmin ? c.moveTo(x, y) : c.lineTo(x, y); }
+  c.stroke();
+  c.restore();
+  // blimp marker
+  const bx = X(S.T), by = Y(S.z/1000);
+  c.fillStyle = C.panel; c.strokeStyle = C.fg; c.lineWidth = 2;
+  c.beginPath(); c.arc(bx, by, 6, 0, Math.PI*2); c.fill(); c.stroke();
+  c.fillStyle = C.fg; c.font = `600 12px ${FONT_DISP}`; c.textAlign = 'left'; c.textBaseline = 'middle';
+  c.fillText('VA-01', bx + 10, by);
+  const zi = isothermAlt(S, tK);
+  $('isoLbl').textContent = zi === null ? 'target out of range' : `${fmtTarget(S.targetF)} at ${zi.toFixed(2)} km`;
+}
+
+// ---------- history chart ----------
+function drawHistory(){
+  const c = hctx, W = histCv._w, H = histCv._h; if (!W) return;
+  c.clearRect(0, 0, W, H);
+  const win = clamp(speed*150, 900, 7*86400);
+  const nWin = Math.min(hCount, Math.floor(win/HIST_DT));
+  const pad = { l:48, r:12, t:22, b:26 }, gap = 30;
+  const ph = (H - pad.t - pad.b - gap)/2;
+  const panels = [
+    { y0:pad.t, get:i => tU(hT[i]), label:'Outside air', unitLbl:unit === 'F' ? '°F' : '°C', col:C.sulfur, band:true },
+    { y0:pad.t + ph + gap, get:i => hZ[i]/1000, label:'Altitude', unitLbl:'km', col:C.fg, band:false },
+  ];
+  const step = Math.max(1, Math.floor(nWin/Math.max(60, W - pad.l - pad.r)));
+  const idx = k => (hHead - nWin + k + HIST_N) % HIST_N; // k=0 oldest
+  const X = k => pad.l + (k/Math.max(1, nWin - 1))*(W - pad.l - pad.r);
+  for (const P of panels){
+    let lo = Infinity, hi = -Infinity;
+    for (let k = 0; k < nWin; k += step){ const v = P.get(idx(k)); if (v < lo) lo = v; if (v > hi) hi = v; }
+    if (P.band){ const t = tU(F2K(S.targetF)), bw = unit === 'F' ? 2 : 10/9; lo = Math.min(lo, t - bw*2.5); hi = Math.max(hi, t + bw*2.5); }
+    if (!isFinite(lo)){ lo = 0; hi = 1; }
+    if (hi - lo < (P.band ? 1 : 0.1)){ const m = (hi + lo)/2, h = P.band ? 0.5 : 0.05; lo = m - h; hi = m + h; }
+    const padv = (hi - lo)*0.08; lo -= padv; hi += padv;
+    const Y = v => P.y0 + (hi - v)/(hi - lo)*ph;
+    c.fillStyle = C.fg; c.font = `600 13px ${FONT_DISP}`; c.textAlign = 'left'; c.textBaseline = 'bottom';
+    c.fillText(`${P.label} (${P.unitLbl})`, pad.l, P.y0 - 5);
+    // grid
+    c.font = `400 11px ${FONT_MONO}`; c.textAlign = 'right'; c.textBaseline = 'middle';
+    const nt = 3;
+    for (let j = 0; j <= nt; j++){
+      const v = lo + (hi - lo)*j/nt, y = Y(v);
+      c.strokeStyle = C.line; c.beginPath(); c.moveTo(pad.l, y); c.lineTo(W - pad.r, y); c.stroke();
+      c.fillStyle = C.muted; c.fillText(v.toFixed(P.band ? 1 : 2), pad.l - 6, y);
+    }
+    if (P.band){
+      const t = tU(F2K(S.targetF)), bw = unit === 'F' ? 2 : 10/9;
+      c.fillStyle = 'rgba(114,210,191,.14)'; c.fillRect(pad.l, Y(t + bw), W - pad.l - pad.r, Y(t - bw) - Y(t + bw));
+      c.strokeStyle = C.band; c.setLineDash([5, 4]); c.beginPath(); c.moveTo(pad.l, Y(t)); c.lineTo(W - pad.r, Y(t)); c.stroke(); c.setLineDash([]);
+    }
+    if (nWin > 1){
+      c.save(); c.beginPath(); c.rect(pad.l, P.y0, W - pad.l - pad.r, ph); c.clip();
+      c.beginPath();
+      for (let k = 0; k < nWin; k += step){ const x = X(k), y = Y(P.get(idx(k))); k === 0 ? c.moveTo(x, y) : c.lineTo(x, y); }
+      const lastK = nWin - 1; c.lineTo(X(lastK), Y(P.get(idx(lastK))));
+      c.strokeStyle = P.col; c.lineWidth = 1.6; c.stroke();
+      c.lineTo(X(lastK), P.y0 + ph); c.lineTo(X(0), P.y0 + ph); c.closePath();
+      c.fillStyle = P.band ? 'rgba(232,192,90,.08)' : 'rgba(242,231,211,.06)'; c.fill();
+      c.restore();
+      const ex = X(lastK), ey = Y(P.get(idx(lastK)));
+      c.fillStyle = P.col; c.beginPath(); c.arc(ex, ey, 3.5, 0, Math.PI*2); c.fill();
+    }
+  }
+  c.fillStyle = C.muted; c.font = `400 11px ${FONT_MONO}`; c.textBaseline = 'top';
+  c.textAlign = 'left'; c.fillText(`−${fmtDur(nWin*HIST_DT || win)}`, pad.l, H - pad.b + 8);
+  c.textAlign = 'right'; c.fillText('now', W - pad.r, H - pad.b + 8);
+  const pct = S.total > 0 ? 100*S.inBand/S.total : 0;
+  $('bandStat').textContent = `within ±2°F: ${pct.toFixed(1)}% of ${fmtDur(S.total)}`;
+  $('histCap').textContent = `Shaded band is ±${unit === 'F' ? '2°F' : '1.1°C'} around the target. Window scales with time speed.`;
+}
+
+// ---------- globe ----------
+function drawGlobe(){
+  const c = gctx, W = globeCv._w, H = globeCv._h; if (!W) return;
+  c.clearRect(0, 0, W, H);
+  const cx = W/2, cy = H/2, r = Math.min(W, H)*0.34;
+  const g = c.createLinearGradient(cx - r, 0, cx + r, 0);
+  g.addColorStop(0, '#2a1e15'); g.addColorStop(.46, '#3a2a1b'); g.addColorStop(.54, '#b98a48'); g.addColorStop(1, '#f0d69c');
+  c.fillStyle = g; c.beginPath(); c.arc(cx, cy, r, 0, Math.PI*2); c.fill();
+  // faint cloud swirls
+  c.save(); c.beginPath(); c.arc(cx, cy, r, 0, Math.PI*2); c.clip();
+  c.strokeStyle = 'rgba(255,240,210,.12)'; c.lineWidth = 2;
+  for (let k = 1; k <= 4; k++){ c.beginPath(); c.arc(cx, cy, r*k/4.6, k, k + 3.6); c.stroke(); }
+  c.restore();
+  // track ring
+  const rr = r*1.16;
+  c.strokeStyle = C.line; c.setLineDash([3, 5]); c.beginPath(); c.arc(cx, cy, rr, 0, Math.PI*2); c.stroke(); c.setLineDash([]);
+  // labels
+  c.fillStyle = C.muted; c.font = `400 10px ${FONT_MONO}`; c.textBaseline = 'middle';
+  c.textAlign = 'left'; c.fillText('noon', cx + rr + 6, cy);
+  c.textAlign = 'right'; c.fillText('midnight', cx - rr - 6, cy);
+  c.textAlign = 'center'; c.fillText('sunrise', cx, cy - rr - 10); c.fillText('sunset', cx, cy + rr + 10);
+  c.fillStyle = C.sulfur; c.textAlign = 'right'; c.fillText('Sun →', W - 4, 10);
+  // trail + blimp
+  const th = hourAngle(S.lt);
+  c.strokeStyle = 'rgba(114,210,191,.45)'; c.lineWidth = 3; c.lineCap = 'round';
+  if (trail.length > 1){
+    c.beginPath(); trail.forEach((a, i) => { const x = cx + rr*Math.cos(a), y = cy + rr*Math.sin(a); i ? c.lineTo(x, y) : c.moveTo(x, y); }); c.stroke();
+  }
+  const bx = cx + rr*Math.cos(th), by = cy + rr*Math.sin(th);
+  c.fillStyle = C.band; c.beginPath(); c.arc(bx, by, 6, 0, Math.PI*2); c.fill();
+  c.strokeStyle = C.panel; c.lineWidth = 2; c.stroke();
+  // direction arrow (clockwise from above the north pole)
+  const a2 = th + 0.28; c.fillStyle = C.band;
+  c.save(); c.translate(cx + rr*Math.cos(a2), cy + rr*Math.sin(a2)); c.rotate(a2 + Math.PI/2);
+  c.beginPath(); c.moveTo(5, 0); c.lineTo(-3, -4); c.lineTo(-3, 4); c.closePath(); c.fill(); c.restore();
+
+  const circ = 2*Math.PI*(R_V + S.z);
+  $('gLaps').textContent = S.laps.toFixed(2);
+  $('gLap').textContent = `${(circ/S.u/86400).toFixed(1)} days`;
+  const solarPeriod = circ/(S.u + SOLAR_DRIFT);
+  let dh = (6 - S.lt + 24) % 24;
+  $('gSun').textContent = fmtDur(dh/24*solarPeriod);
+}
+function drawAllPanels(){ drawProfile(); drawHistory(); drawGlobe(); }
+
+// ---------- HUD / telemetry ----------
+function updateHud(){
+  const tK = F2K(S.targetF), dTv = tU(S.T) - tU(tK);
+  $('hudTemp').textContent = fmtT(S.T, 1);
+  $('hudTempSub').textContent = `target ${fmtTarget(S.targetF)} · Δ ${dTv >= 0 ? '+' : '−'}${Math.abs(dTv).toFixed(1)}°`;
+  const d = daylight(S.lt);
+  $('hudTime').textContent = fmtHM(S.lt);
+  $('hudDay').textContent = `${d > 0.6 ? 'daylight' : d > 0.15 ? 'twilight' : 'night'} · ${(S.t/86400).toFixed(2)} Earth days aloft`;
+  const zi = isothermAlt(S, tK);
+  $('tAlt').textContent = `${(S.z/1000).toFixed(2)} km`;
+  $('tAltSub').textContent = zi === null ? 'target isotherm out of range' : `isotherm at ${zi.toFixed(2)} km (${((S.z/1000 - zi)*1000).toFixed(0)} m)`;
+  const bar = S.P/1e5;
+  $('tP').textContent = `${bar.toFixed(3)} bar`;
+  $('tPSub').textContent = `like ${(-8.4*Math.log(bar/1.01325)).toFixed(1)} km up on Earth`;
+  $('tRho').textContent = `${S.rho.toFixed(3)} kg/m³`;
+  $('tWind').textContent = `${S.u.toFixed(0)} m/s`;
+  $('tWindSub').textContent = `westward · ${(S.u*3.6).toFixed(0)} km/h`;
+  $('tVz').textContent = `${S.v >= 0 ? '+' : '−'}${Math.abs(S.v).toFixed(2)} m/s`;
+  $('tVzSub').textContent = `air moving ${S.w >= 0 ? 'up' : 'down'} ${Math.abs(S.w).toFixed(2)} m/s`;
+  $('tB').textContent = `${Math.round(S.b).toLocaleString()} kg`;
+  $('tBBar').style.width = `${(S.b/B_MAX*100).toFixed(1)}%`;
+  $('tBSub').textContent = S.bdot > 0.05 ? `pumping in ${S.bdot.toFixed(1)} kg/s` : S.bdot < -0.05 ? `venting ${(-S.bdot).toFixed(1)} kg/s` : `holding · net lift ${S.lift >= 0 ? '+' : '−'}${Math.abs(S.lift).toFixed(0)} kg`;
+
+  const pill = $('statusPill');
+  let cls = 'move', txt;
+  if (S.sat === 'light'){ cls = 'warn'; txt = 'Ballast empty · can’t climb higher'; }
+  else if (S.sat === 'heavy'){ cls = 'warn'; txt = 'Ballast tank full · can’t go lower'; }
+  else if (Math.abs(S.T - tK) < 10/9){ cls = 'band'; txt = `Holding the ${fmtTarget(S.targetF)} band`; }
+  else if (!S.auto){ cls = 'warn'; txt = S.v > 0.05 ? 'Manual · climbing' : S.v < -0.05 ? 'Manual · descending' : 'Manual · drifting'; }
+  else txt = S.T > tK ? 'Too warm · climbing' : 'Too cool · descending';
+  if (S.event) txt += ' · downdraft';
+  pill.className = `pill ${cls}`; pill.innerHTML = `<span class="dot"></span>${txt}`;
+}
+
+// ---------- controls ----------
+const speedBtns = [...document.querySelectorAll('#speedSeg button')];
+function setSpeed(v){ speed = v; speedBtns.forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.speed === v))); drawHistory(); }
+speedBtns.forEach(b => b.addEventListener('click', () => setSpeed(+b.dataset.speed)));
+$('playBtn').addEventListener('click', () => { running = !running; $('playBtn').textContent = running ? 'Pause' : 'Resume'; });
+const target = $('target');
+function syncTarget(){ $('targetOut').textContent = fmtTarget(S.targetF); target.value = S.targetF; target.setAttribute('aria-valuetext', fmtTarget(S.targetF)); drawAllPanels(); }
+target.addEventListener('input', () => { S.targetF = +target.value; syncTarget(); });
+$('reset70').addEventListener('click', () => { S.targetF = 70; syncTarget(); });
+const autoBox = $('auto'), pumpBtn = $('pumpBtn'), ventBtn = $('ventBtn');
+function syncAuto(){ S.auto = autoBox.checked; pumpBtn.disabled = ventBtn.disabled = S.auto; if (S.auto) S.manual = 0; }
+autoBox.addEventListener('change', syncAuto);
+function holdify(btn, dir){
+  const on = e => { if (btn.disabled) return; e.preventDefault(); S.manual = dir; btn.classList.add('active'); };
+  const off = () => { if (S.manual === dir) S.manual = 0; btn.classList.remove('active'); };
+  btn.addEventListener('pointerdown', on);
+  ['pointerup', 'pointerleave', 'pointercancel', 'blur'].forEach(ev => btn.addEventListener(ev, off));
+  btn.addEventListener('keydown', e => { if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) on(e); });
+  btn.addEventListener('keyup', e => { if (e.key === ' ' || e.key === 'Enter') off(); });
+}
+holdify(pumpBtn, 1); holdify(ventBtn, -1);
+$('weather').addEventListener('change', e => { S.weather = e.target.checked; drawProfile(); });
+$('gustBtn').addEventListener('click', () => { S.event = { t0:S.t, dur:240, amp:-3.5 }; });
+const unitBtns = [...document.querySelectorAll('#unitSeg button')];
+unitBtns.forEach(b => b.addEventListener('click', () => {
+  unit = b.dataset.unit; unitBtns.forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  $('reset70').textContent = fmtTarget(70); syncTarget(); updateHud();
+}));
+
+// ---------- loop ----------
+let last = performance.now(), frame = 0;
+function tick(now){
+  const dtReal = Math.min(0.1, (now - last)/1000); last = now;
+  if (running){
+    let simDt = dtReal*speed;
+    const h = 0.5;
+    while (simDt > 1e-9){
+      const d = Math.min(h, simDt); step(S, d); simDt -= d;
+      if (S.t >= hNext){ pushHist(); hNext = S.t + HIST_DT; }
+    }
+    const th = hourAngle(S.lt);
+    if (!trail.length || Math.abs(th - trail[trail.length-1]) > 0.01){ trail.push(th); if (trail.length > 160) trail.shift(); }
+  }
+  drawScene(running ? dtReal : 0);
+  if (frame % 4 === 0) updateHud();
+  if (frame % 8 === 0) drawAllPanels();
+  frame++;
+  requestAnimationFrame(tick);
+}
+
+function start(data){
+  if (data && data.s){ Object.assign(S, data.s); speed = data.speed || speed; unit = data.unit || unit; }
+  autoBox.checked = S.auto; $('weather').checked = S.weather;
+  unitBtns.forEach(x => x.setAttribute('aria-pressed', String(x.dataset.unit === unit)));
+  $('reset70').textContent = fmtTarget(70);
+  $('playBtn').textContent = running ? 'Pause' : 'Resume';
+  syncAuto(); setSpeed(speed); syncTarget();
+  step(S, 0.01); pushHist(); hNext = S.t + HIST_DT; camZ = S.z/1000;
+  updateHud(); drawAllPanels(); drawScene(0);
+  requestAnimationFrame(t => { last = t; tick(t); });
+}
+const hot = window.claude && window.claude.hot;
+if (hot && hot.snapshot) hot.snapshot(() => ({ s:{ ...S, manual:0 }, speed, unit }));
+if (hot && hot.ready) hot.ready(start); else start((hot && hot.data) || {});
+})();
+</script>
