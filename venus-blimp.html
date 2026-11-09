@@ -4,7 +4,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Saira+Semi+Condensed:wght@500;600;700&display=swap">
 <style>
-/* Layout: a flight console. The porthole view on top, a telemetry strip, the controls, then three instruments (profile, history, orbit). */
+/* Layout: a flight console with two views. Flight: porthole view, telemetry, controls, instruments.
+   Design lab: mission settings, the optimizer's learning curves, what it has learned, the best design, and the atmosphere column. */
 :root{
   --bg:#19120d;
   --panel:#231912;
@@ -29,21 +30,29 @@ body{
   padding-block:22px 48px;
 }
 .wrap{max-width:1240px;margin:0 auto;display:grid;gap:16px}
+main{display:grid;gap:16px;min-width:0}
 h1,h2,h3{font-family:var(--f-display);font-weight:600;margin:0;text-wrap:balance;letter-spacing:.01em}
 .eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--sulfur)}
-header{display:flex;flex-wrap:wrap;gap:6px 24px;align-items:flex-end;justify-content:space-between}
-header .titles{display:grid;gap:2px;min-width:0}
+header{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between}
+header .titles{display:grid;gap:2px;min-width:0;flex:1 1 420px}
 header h1{font-size:clamp(30px,4.4vw,44px);line-height:1.05}
-header p{margin:0;color:var(--muted);max-width:62ch}
+header p{margin:0;color:var(--muted);max-width:66ch}
+.tabs{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel)}
+.tabs a{font-family:var(--f-display);font-weight:600;font-size:17px;color:var(--muted);text-decoration:none;padding:8px 18px;border-right:1px solid var(--line)}
+.tabs a:last-child{border-right:0}
+.tabs a[aria-current="page"]{background:var(--sulfur);color:#1d140c}
+.tabs a:focus-visible{outline:2px solid var(--sulfur);outline-offset:-2px}
 
 /* scene */
 .scene{position:relative;border-radius:14px;overflow:hidden;aspect-ratio:16/7;min-height:360px;max-width:100%;background:#2a1d14;border:1px solid var(--line)}
 .scene canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .hud{position:absolute;background:var(--hud);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-radius:10px;padding:10px 14px;color:var(--fg)}
-.hud-tl{top:12px;left:12px}
+.hud-tl{top:12px;left:64px}
 .hud-tr{top:12px;right:12px;text-align:right}
-.hud-bl{bottom:12px;left:12px;display:flex;gap:10px;align-items:center;padding:8px 12px}
-.hud-br{bottom:12px;right:12px;font-family:var(--f-mono);font-size:11px;color:var(--muted);padding:6px 10px}
+.hud-bl{bottom:12px;left:64px;display:flex;gap:10px;align-items:center;padding:8px 12px}
+.hud-br{bottom:12px;right:12px;font-family:var(--f-mono);font-size:11px;color:var(--muted);padding:6px 10px;max-width:52%;text-align:right}
+.hud-lost{top:50%;left:50%;transform:translate(-50%,-50%);max-width:min(440px,86%);display:grid;gap:6px;padding:16px 18px;border:1px solid var(--warn)}
+.hud-lost p{margin:0;font-size:14px;color:var(--fg)}
 .hud .lbl{font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 .big{font-family:var(--f-display);font-weight:600;font-size:clamp(38px,6vw,58px);line-height:1;font-variant-numeric:tabular-nums}
 .sub{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
@@ -55,10 +64,10 @@ header p{margin:0;color:var(--muted);max-width:62ch}
 .dot{width:8px;height:8px;border-radius:50%;background:currentColor;display:inline-block;margin-right:6px;vertical-align:1px}
 
 /* telemetry */
-.tele{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.cell{background:var(--panel);padding:10px 14px;display:grid;gap:2px;min-width:0}
-.cell .lbl{font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
-.cell .val{font-family:var(--f-display);font-size:24px;font-weight:600;line-height:1.15;font-variant-numeric:tabular-nums}
+.tele{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.cell{background:var(--panel);padding:10px 14px;display:grid;gap:2px;min-width:0;align-content:start}
+.cell .lbl,.lbl{font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.cell .val{font-family:var(--f-display);font-size:24px;font-weight:600;line-height:1.15;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .cell .sub{overflow-wrap:anywhere}
 .bar{height:6px;border-radius:3px;background:var(--panel-2);overflow:hidden;margin-top:4px}
 .bar i{display:block;height:100%;width:40%;background:var(--sulfur);border-radius:3px}
@@ -66,11 +75,12 @@ header p{margin:0;color:var(--muted);max-width:62ch}
 /* controls */
 .controls{display:flex;flex-wrap:wrap;gap:14px 22px;align-items:flex-end;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
 .ctl{display:grid;gap:6px;min-width:0}
-.ctl > .lbl{font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 button{font:inherit;color:var(--fg);background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer;font-size:14px;touch-action:manipulation}
 button:hover:not(:disabled){border-color:var(--muted)}
 button:disabled{opacity:.4;cursor:not-allowed}
-button:focus-visible,input:focus-visible{outline:2px solid var(--sulfur);outline-offset:2px}
+button.primary{background:var(--sulfur);color:#1d140c;border-color:var(--sulfur);font-weight:600}
+button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--sulfur);outline-offset:2px}
+select{font:inherit;font-size:14px;color:var(--fg);background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
 .seg{display:flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .seg button{border:0;border-radius:0;border-right:1px solid var(--line);font-family:var(--f-mono);font-size:12px;padding:7px 10px;background:transparent}
 .seg button:last-child{border-right:0}
@@ -78,16 +88,16 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--sulfur);outline
 #playBtn{min-width:86px}
 .target{display:flex;gap:10px;align-items:center}
 .target output{font-family:var(--f-display);font-weight:600;font-size:22px;min-width:68px;font-variant-numeric:tabular-nums;color:var(--band)}
-input[type=range]{width:180px;max-width:46vw;accent-color:var(--band)}
+input[type=range]{width:170px;max-width:46vw;accent-color:var(--band)}
 .switch{display:flex;gap:8px;align-items:center;cursor:pointer;font-size:14px}
 .switch input{appearance:none;-webkit-appearance:none;width:38px;height:22px;border-radius:11px;background:var(--panel-2);border:1px solid var(--line);position:relative;cursor:pointer;margin:0;transition:background .15s}
 .switch input::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--muted);transition:transform .15s,background .15s}
 .switch input:checked{background:color-mix(in srgb,var(--band) 35%,var(--panel-2))}
 .switch input:checked::after{transform:translateX(16px);background:var(--band)}
-.row{display:flex;gap:8px;flex-wrap:wrap}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .hold.active{background:var(--sulfur);color:#1d140c}
 
-/* instruments */
+/* instruments + lab panels */
 .instruments{display:grid;grid-template-columns:1.05fr 1.45fr .9fr;gap:16px}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:grid;gap:8px;grid-template-rows:auto 1fr auto;min-width:0}
 .panel h2{font-size:19px}
@@ -96,9 +106,57 @@ input[type=range]{width:180px;max-width:46vw;accent-color:var(--band)}
 .chart canvas{position:absolute;inset:0;width:100%;height:100%}
 .globe-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px}
 .globe-stats div{display:grid}
-.globe-stats .lbl{font-family:var(--f-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.globe-stats .lbl{letter-spacing:.1em}
 .globe-stats b{font-family:var(--f-display);font-weight:600;font-size:20px;font-variant-numeric:tabular-nums}
 .cap{font-size:13px;color:var(--muted);margin:0}
+
+/* lab */
+.lab-intro{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px 28px;align-items:start}
+.lab-intro p{margin:0;color:var(--muted);max-width:68ch}
+.lab-intro b{color:var(--fg);font-weight:500}
+.lab-status{display:grid;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 16px}
+.lab-status .mid{color:var(--sulfur)}
+.prog{height:4px;background:var(--panel-2);border-radius:2px;overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:var(--sulfur)}
+.lab-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px}
+.s7{grid-column:span 7}.s5{grid-column:span 5}.s8{grid-column:span 8}.s4{grid-column:span 4}.s6{grid-column:span 6}
+.learned{display:grid;gap:14px;align-content:start}
+.group h3{font-size:15px;color:var(--fg);margin-bottom:4px}
+.prob{display:grid;grid-template-columns:minmax(92px,1.1fr) minmax(0,2fr) 40px;gap:8px;align-items:center;font-size:13px;padding:1px 0}
+.prob span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prob .pbar{height:8px;background:var(--panel-2);border-radius:4px;overflow:hidden}
+.prob .pbar i{display:block;height:100%;width:0;background:var(--sulfur);border-radius:4px;transition:width .3s}
+.prob.lead .pbar i{background:var(--band)}
+.prob.lead span:first-child{color:var(--band)}
+.prob output{font-family:var(--f-mono);font-size:12px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.track{display:grid;grid-template-columns:minmax(92px,1.1fr) minmax(0,2fr) 76px;gap:8px;align-items:center;font-size:13px;padding:2px 0}
+.track .tr{position:relative;height:12px;background:var(--panel-2);border-radius:6px}
+.track .tr i{position:absolute;top:2px;bottom:2px;background:color-mix(in srgb,var(--sulfur) 45%,transparent);border-radius:4px}
+.track .tr b{position:absolute;top:-2px;width:3px;height:16px;margin-left:-1.5px;background:var(--band);border-radius:2px}
+.track output{font-family:var(--f-mono);font-size:12px;color:var(--band);text-align:right;font-variant-numeric:tabular-nums}
+.best-shape{position:relative;height:190px;max-width:100%}
+.best-shape canvas{position:absolute;inset:0;width:100%;height:100%}
+.stack{display:grid;gap:4px}
+.layer{display:grid;grid-template-columns:14px 82px minmax(0,1fr) auto;gap:8px;align-items:center;font-size:13px}
+.layer .sw{width:14px;height:14px;border-radius:3px;border:1px solid var(--line)}
+.layer .role{font-family:var(--f-mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.layer .amt{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 14px}
+.stats div{display:grid;min-width:0}
+.stats b{font-family:var(--f-display);font-weight:600;font-size:18px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.verdict{font-size:14px;margin:0;padding:8px 12px;border-radius:8px;background:var(--panel-2)}
+.verdict.ok{color:var(--band)}
+.verdict.bad{color:var(--warn)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+details{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 16px}
+summary{cursor:pointer;font-family:var(--f-display);font-weight:600;font-size:18px}
+.tablewrap{overflow-x:auto;margin-top:10px}
+table{border-collapse:collapse;font-size:13px;min-width:820px;width:100%}
+th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:500}
+td.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+td.note{color:var(--muted);max-width:46ch}
 
 /* notes */
 .notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;margin-top:6px}
@@ -106,156 +164,282 @@ input[type=range]{width:180px;max-width:46vw;accent-color:var(--band)}
 .note h3{font-size:17px;color:var(--sulfur)}
 .note p{margin:0;color:var(--muted);font-size:14px}
 .note b{color:var(--fg);font-weight:500}
-footer{font-size:12px;color:var(--muted);max-width:110ch;border-top:1px solid var(--line);padding-top:12px}
+footer{font-size:12px;color:var(--muted);max-width:120ch;border-top:1px solid var(--line);padding-top:12px}
 
-@media (max-width:960px){.instruments{grid-template-columns:1fr 1fr}.instruments .panel:last-child{grid-column:1/-1}}
+@media (max-width:960px){
+  .instruments{grid-template-columns:1fr 1fr}.instruments .panel:last-child{grid-column:1/-1}
+  .s7,.s5,.s8,.s4,.s6{grid-column:span 12}
+  .lab-intro{grid-template-columns:1fr}
+}
 @media (max-width:640px){
   .instruments{grid-template-columns:1fr}
-  .scene{aspect-ratio:auto;height:440px}
+  .tele{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .scene{aspect-ratio:auto;height:460px}
+  .hud-tl{left:60px}
   .hud-tr{top:auto;bottom:56px;right:12px}
+  .hud-bl{left:60px}
   .hud-br{display:none}
   .chart{min-height:260px}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
-@media (prefers-reduced-motion:reduce){.switch input,.switch input::after{transition:none}}
+@media (prefers-reduced-motion:reduce){.switch input,.switch input::after,.prob .pbar i{transition:none}}
 </style>
 
 <div class="wrap">
   <header>
     <div class="titles">
-      <span class="eyebrow">Venus · middle cloud deck · aerostat VA-01</span>
+      <span class="eyebrow">Venus · sulfuric acid cloud deck · aerostat VA-01</span>
       <h1>Venus Cloud Blimp</h1>
-      <p>A helium airship drifting on Venus's super-rotating winds. The autopilot reads the outside thermometer and pumps CO₂ ballast in or out to stay where the air is a comfortable 70°F.</p>
+      <p>A helium airship riding Venus's super-rotating winds through clouds of concentrated sulfuric acid, 56 km above a 465°C surface. Fly it, or let the design lab evolve a better envelope.</p>
     </div>
+    <nav class="tabs" aria-label="Views">
+      <a href="#flight" id="tabFlight" aria-current="page">Flight</a>
+      <a href="#lab" id="tabLab">Design lab</a>
+    </nav>
   </header>
 
-  <section class="scene" id="sceneBox" aria-label="Live view of the blimp in the Venus clouds">
-    <canvas id="scene"></canvas>
-    <div class="hud hud-tl">
-      <div class="lbl">Outside air</div>
-      <div class="big" id="hudTemp">70.0°F</div>
-      <div class="sub" id="hudTempSub">target 70°F · Δ 0.0</div>
-    </div>
-    <div class="hud hud-tr">
-      <div class="lbl">Local solar time</div>
-      <div class="mid" id="hudTime">08:30</div>
-      <div class="sub" id="hudDay">daylight · 0.0 Earth days aloft</div>
-    </div>
-    <div class="hud hud-bl">
-      <span class="pill move" id="statusPill"><span class="dot"></span>Climbing</span>
-    </div>
-    <div class="hud hud-br">blimp drawn ~10× scale</div>
-  </section>
+  <!-- ===================== FLIGHT ===================== -->
+  <main id="viewFlight">
+    <section class="scene" id="sceneBox" aria-label="Live view of the blimp in the Venus clouds">
+      <canvas id="scene"></canvas>
+      <div class="hud hud-tl">
+        <div class="lbl">Outside air</div>
+        <div class="big" id="hudTemp">70.0°F</div>
+        <div class="sub" id="hudTempSub">target 70°F · Δ 0.0</div>
+      </div>
+      <div class="hud hud-tr">
+        <div class="lbl">Local solar time</div>
+        <div class="mid" id="hudTime">08:30</div>
+        <div class="sub" id="hudDay">daylight · 0.0 Earth days aloft</div>
+      </div>
+      <div class="hud hud-bl">
+        <span class="pill move" id="statusPill"><span class="dot"></span>Climbing</span>
+      </div>
+      <div class="hud hud-br" id="hudDesign">blimp drawn ~10× scale</div>
+      <div class="hud hud-lost" id="lostBox" hidden>
+        <div class="lbl" style="color:var(--warn)">Signal lost</div>
+        <div class="mid" id="lostTitle">Lost at the surface</div>
+        <p id="lostText"></p>
+        <div class="row"><button type="button" class="primary" id="relaunch">Relaunch</button><a href="#lab" style="color:var(--sulfur);font-size:14px">Design a better one</a></div>
+      </div>
+    </section>
 
-  <section class="tele" aria-label="Telemetry">
-    <div class="cell"><span class="lbl">Altitude</span><span class="val" id="tAlt">–</span><span class="sub" id="tAltSub">–</span></div>
-    <div class="cell"><span class="lbl">Pressure</span><span class="val" id="tP">–</span><span class="sub" id="tPSub">–</span></div>
-    <div class="cell"><span class="lbl">Air density</span><span class="val" id="tRho">–</span><span class="sub">Earth sea level: 1.23</span></div>
-    <div class="cell"><span class="lbl">Wind</span><span class="val" id="tWind">–</span><span class="sub" id="tWindSub">–</span></div>
-    <div class="cell"><span class="lbl">Vertical speed</span><span class="val" id="tVz">–</span><span class="sub" id="tVzSub">–</span></div>
-    <div class="cell"><span class="lbl">CO₂ ballast</span><span class="val" id="tB">–</span><div class="bar"><i id="tBBar"></i></div><span class="sub" id="tBSub">–</span></div>
-  </section>
+    <section class="tele" aria-label="Telemetry">
+      <div class="cell"><span class="lbl">Altitude</span><span class="val" id="tAlt">–</span><span class="sub" id="tAltSub">–</span></div>
+      <div class="cell"><span class="lbl">Pressure</span><span class="val" id="tP">–</span><span class="sub" id="tPSub">–</span></div>
+      <div class="cell"><span class="lbl">Wind</span><span class="val" id="tWind">–</span><span class="sub" id="tWindSub">–</span></div>
+      <div class="cell"><span class="lbl">Vertical speed</span><span class="val" id="tVz">–</span><span class="sub" id="tVzSub">–</span></div>
+      <div class="cell"><span class="lbl">Acid cloud</span><span class="val" id="tAcid">–</span><span class="sub" id="tAcidSub">–</span></div>
+      <div class="cell"><span class="lbl">Helium</span><span class="val" id="tHe">–</span><span class="sub" id="tHeSub">–</span></div>
+      <div class="cell"><span class="lbl">Envelope</span><span class="val" id="tEnv">–</span><span class="sub" id="tEnvSub">–</span></div>
+      <div class="cell"><span class="lbl">CO₂ trim ballast</span><span class="val" id="tB">–</span><div class="bar"><i id="tBBar"></i></div><span class="sub" id="tBSub">–</span></div>
+    </section>
 
-  <section class="controls" aria-label="Controls">
-    <div class="ctl">
-      <span class="lbl">Sim</span>
-      <button id="playBtn" type="button">Pause</button>
-    </div>
-    <div class="ctl">
-      <span class="lbl">Time speed</span>
-      <div class="seg" id="speedSeg" role="group" aria-label="Time speed">
-        <button type="button" data-speed="1">1×</button>
-        <button type="button" data-speed="10">10×</button>
-        <button type="button" data-speed="60">1 min/s</button>
-        <button type="button" data-speed="600">10 min/s</button>
-        <button type="button" data-speed="3600">1 h/s</button>
-        <button type="button" data-speed="14400">4 h/s</button>
+    <section class="controls" aria-label="Flight controls">
+      <div class="ctl">
+        <span class="lbl">Sim</span>
+        <button id="playBtn" type="button">Pause</button>
       </div>
-    </div>
-    <div class="ctl">
-      <label class="lbl" for="target">Target temperature</label>
-      <div class="target">
-        <input type="range" id="target" min="40" max="105" step="1" value="70">
-        <output id="targetOut" for="target">70°F</output>
-        <button type="button" id="reset70">70°F</button>
+      <div class="ctl">
+        <span class="lbl">Time speed</span>
+        <div class="seg" id="speedSeg" role="group" aria-label="Time speed">
+          <button type="button" data-speed="1">1×</button>
+          <button type="button" data-speed="60">1 min/s</button>
+          <button type="button" data-speed="600">10 min/s</button>
+          <button type="button" data-speed="3600">1 h/s</button>
+          <button type="button" data-speed="14400">4 h/s</button>
+          <button type="button" data-speed="86400">1 day/s</button>
+        </div>
       </div>
-    </div>
-    <div class="ctl">
-      <span class="lbl">Altitude control</span>
-      <label class="switch"><input type="checkbox" id="auto" checked> Autopilot</label>
-    </div>
-    <div class="ctl">
-      <span class="lbl">Manual ballast (hold)</span>
-      <div class="row">
-        <button type="button" class="hold" id="pumpBtn" disabled>Pump in CO₂ ↓</button>
-        <button type="button" class="hold" id="ventBtn" disabled>Vent CO₂ ↑</button>
+      <div class="ctl">
+        <label class="lbl" for="target">Target temperature</label>
+        <div class="target">
+          <input type="range" id="target" min="40" max="105" step="1" value="70">
+          <output id="targetOut" for="target">70°F</output>
+          <button type="button" id="reset70">70°F</button>
+        </div>
       </div>
-    </div>
-    <div class="ctl">
-      <span class="lbl">Weather</span>
-      <div class="row">
-        <label class="switch"><input type="checkbox" id="weather" checked> Convection &amp; waves</label>
-        <button type="button" id="gustBtn">Trigger downdraft</button>
+      <div class="ctl">
+        <span class="lbl">Altitude control</span>
+        <label class="switch"><input type="checkbox" id="auto" checked> Autopilot</label>
       </div>
-    </div>
-    <div class="ctl">
-      <span class="lbl">Units</span>
-      <div class="seg" id="unitSeg" role="group" aria-label="Temperature units">
-        <button type="button" data-unit="F" aria-pressed="true">°F</button>
-        <button type="button" data-unit="C" aria-pressed="false">°C</button>
+      <div class="ctl">
+        <span class="lbl">Manual (hold)</span>
+        <div class="row">
+          <button type="button" class="hold" id="pumpBtn" disabled>Pump in CO₂ ↓</button>
+          <button type="button" class="hold" id="ventBtn" disabled>Vent CO₂ ↑</button>
+          <button type="button" class="hold" id="leakBtn">Vent helium</button>
+        </div>
       </div>
-    </div>
-  </section>
+      <div class="ctl">
+        <span class="lbl">Weather</span>
+        <div class="row">
+          <label class="switch"><input type="checkbox" id="weather" checked> Convection &amp; waves</label>
+          <button type="button" id="gustBtn">Trigger downdraft</button>
+        </div>
+      </div>
+      <div class="ctl">
+        <span class="lbl">Units</span>
+        <div class="seg" id="unitSeg" role="group" aria-label="Temperature units">
+          <button type="button" data-unit="F" aria-pressed="true">°F</button>
+          <button type="button" data-unit="C" aria-pressed="false">°C</button>
+        </div>
+      </div>
+    </section>
 
-  <section class="instruments">
-    <div class="panel">
-      <div class="head"><h2>Where 70°F lives</h2><span class="sub" id="isoLbl">–</span></div>
-      <div class="chart"><canvas id="profile" aria-label="Venus temperature versus altitude with the blimp's position"></canvas></div>
-      <p class="cap">Temperature falls about 9° C per km through the middle cloud. The dashed line is your target; the bright curve shifts with sunlight and atmospheric waves.</p>
-    </div>
-    <div class="panel">
-      <div class="head"><h2>Flight log</h2><span class="sub" id="bandStat">–</span></div>
-      <div class="chart"><canvas id="history" aria-label="Recent outside temperature and altitude"></canvas></div>
-      <p class="cap" id="histCap">Shaded band is ±2°F around the target.</p>
-    </div>
-    <div class="panel">
-      <div class="head"><h2>Around the planet</h2><span class="sub">view from above north pole</span></div>
-      <div class="chart" style="min-height:230px"><canvas id="globe" aria-label="Blimp position around Venus relative to the Sun"></canvas></div>
-      <div class="globe-stats">
-        <div><span class="lbl">Laps</span><b id="gLaps">0.00</b></div>
-        <div><span class="lbl">One lap takes</span><b id="gLap">–</b></div>
-        <div><span class="lbl">Next sunrise</span><b id="gSun">–</b></div>
-        <div><span class="lbl">Sunrise in the</span><b>west</b></div>
+    <section class="instruments">
+      <div class="panel">
+        <div class="head"><h2>Where the target lives</h2><span class="sub" id="isoLbl">–</span></div>
+        <div class="chart"><canvas id="profile" aria-label="Venus temperature versus altitude with the blimp's position"></canvas></div>
+        <p class="cap">Temperature falls about 9°C per km through the middle cloud. The bright curve shifts with sunlight and atmospheric waves.</p>
       </div>
-    </div>
-  </section>
+      <div class="panel">
+        <div class="head"><h2>Flight log</h2><span class="sub" id="bandStat">–</span></div>
+        <div class="chart"><canvas id="history" aria-label="Recent outside temperature and altitude"></canvas></div>
+        <p class="cap" id="histCap">Shaded band is ±5°F around the target.</p>
+      </div>
+      <div class="panel">
+        <div class="head"><h2>Around the planet</h2><span class="sub">view from above north pole</span></div>
+        <div class="chart" style="min-height:230px"><canvas id="globe" aria-label="Blimp position around Venus relative to the Sun"></canvas></div>
+        <div class="globe-stats">
+          <div><span class="lbl">Laps</span><b id="gLaps">0.00</b></div>
+          <div><span class="lbl">One lap takes</span><b id="gLap">–</b></div>
+          <div><span class="lbl">Next sunrise</span><b id="gSun">–</b></div>
+          <div><span class="lbl">Sunrise in the</span><b>west</b></div>
+        </div>
+      </div>
+    </section>
 
-  <section class="notes">
-    <div class="note"><h3>Why about 56 km up</h3><p>Venus's surface is 465°C under 92 bar of CO₂. Climb into the clouds and it cools steadily. Near <b>55–56 km</b> the air is about <b>21°C and 0.5 bar</b>, roughly the pressure at the top of Kilimanjaro.</p></div>
-    <div class="note"><h3>Riding the wind</h3><p>The upper atmosphere super-rotates. At this altitude the wind runs about <b>60 m/s westward</b>, so the blimp circles the planet in about a week and the Sun rises in the west.</p></div>
-    <div class="note"><h3>How it holds altitude</h3><p>The helium envelope is sealed and rigid-pressure, so its lift depends only on outside air density. To sink, a compressor packs <b>CO₂ from outside</b> into a tank. To rise, it vents some back out.</p></div>
-    <div class="note"><h3>It has been done</h3><p>In 1985 the Soviet <b>VEGA 1 and 2</b> balloons floated near 54 km for about two days each, measuring winds and turbulence on the way.</p></div>
-    <div class="note"><h3>Air is a lifting gas</h3><p>Earth air (29 g/mol) is lighter than Venus's CO₂ (43 g/mol). A habitat full of breathable air would float, with about 40% of helium's lift.</p></div>
-  </section>
+    <section class="notes">
+      <div class="note"><h3>Why about 56 km up</h3><p>Venus's surface is 465°C under 92 bar of CO₂. Climb into the clouds and it cools steadily. Near <b>55–56 km</b> the air is about <b>21°C and 0.5 bar</b>, roughly the pressure at the top of Kilimanjaro.</p></div>
+      <div class="note"><h3>Flying through acid</h3><p>The clouds are droplets of <b>80–99% sulfuric acid</b>, densest in the lower cloud near 48–50 km. Below about 47 km the droplets evaporate in the heat.</p></div>
+      <div class="note"><h3>How it holds altitude</h3><p>The sealed helium envelope floats at a fixed air density. A <b>2.5 kW compressor</b> packs outside CO₂ into a tank at about 16 kg per hour to trim lower, and venting trims higher.</p></div>
+      <div class="note"><h3>If the helium runs out</h3><p>Once the envelope can't stay pressurized at night, it sinks. Nothing stops it before the <b>465°C surface</b>, and each material fails as it passes its temperature limit.</p></div>
+    </section>
+  </main>
 
-  <footer>Model: temperatures follow an approximate Venus International Reference Atmosphere (VIRA) profile with a hydrostatic pressure column (92.1 bar at the surface). Day/night tides add up to about 2 K near the cloud tops, gravity waves about 1 K, and convective updrafts are strongest near 52 km. Blimp: 5,000 m³ helium envelope, 2,650 kg dry mass, up to 2,500 kg CO₂ ballast, compressor 3 kg/s in, 6 kg/s vent. Vertical motion includes buoyancy, added mass and drag. Horizontally the blimp drifts with the wind. Equatorial track. A simulation for intuition, not mission design.</footer>
+  <!-- ===================== DESIGN LAB ===================== -->
+  <main id="viewLab" hidden>
+    <section class="lab-intro">
+      <p>The optimizer is a <b>cross-entropy method</b>, a simple machine-learning search. Each generation it samples envelope designs from probability distributions over the four layer materials, their thicknesses, the hull shape and the helium pressure. It sizes each design to float at the target temperature, then flies it through a full mission of acid, sunlight, helium leakage and fabric aging. The <b>top 20%</b> pull the distributions toward themselves, so the bars below show what it has learned.</p>
+      <div class="lab-status" aria-live="polite">
+        <span class="lbl">Optimizer</span>
+        <div class="mid" id="labGen">Generation 0</div>
+        <div class="sub" id="labEvals">0 designs flown</div>
+        <div class="prog"><i id="labProg"></i></div>
+      </div>
+    </section>
+
+    <section class="controls" aria-label="Mission and optimizer settings">
+      <div class="ctl">
+        <span class="lbl">Optimizer</span>
+        <div class="row">
+          <button type="button" class="primary" id="labRun">Pause</button>
+          <button type="button" id="labStep">Step 1 generation</button>
+          <button type="button" id="labReset">Restart</button>
+        </div>
+      </div>
+      <div class="ctl">
+        <label class="lbl" for="mTarget">Float at</label>
+        <div class="target"><input type="range" id="mTarget" min="40" max="200" step="5" value="70"><output id="mTargetOut">70°F</output></div>
+      </div>
+      <div class="ctl">
+        <label class="lbl" for="mPayload">Gondola + payload</label>
+        <div class="target"><input type="range" id="mPayload" min="100" max="3000" step="50" value="1500"><output id="mPayloadOut">1,500 kg</output></div>
+      </div>
+      <div class="ctl">
+        <label class="lbl" for="mSpeed">Daytime cruise airspeed</label>
+        <div class="target"><input type="range" id="mSpeed" min="0" max="20" step="1" value="8"><output id="mSpeedOut">8 m/s</output></div>
+      </div>
+      <div class="ctl">
+        <label class="lbl" for="mGoal">Mission length</label>
+        <div class="target"><input type="range" id="mGoal" min="30" max="1095" step="15" value="360"><output id="mGoalOut">360 d</output></div>
+      </div>
+      <div class="ctl">
+        <label class="lbl" for="mBeta">Penalty on mass</label>
+        <div class="target"><input type="range" id="mBeta" min="0" max="1" step="0.05" value="0.35"><output id="mBetaOut">0.35</output></div>
+      </div>
+      <div class="ctl">
+        <label class="lbl" for="mSF">Min safety factor</label>
+        <div class="target"><input type="range" id="mSF" min="1.5" max="5" step="0.5" value="3"><output id="mSFOut">3.0</output></div>
+      </div>
+      <div class="ctl">
+        <span class="lbl">Untested materials</span>
+        <label class="switch"><input type="checkbox" id="mCaution" checked> Assume 10× faster acid attack</label>
+      </div>
+      <div class="ctl">
+        <label class="lbl" for="mPop">Designs per generation</label>
+        <select id="mPop"><option value="24">24</option><option value="48" selected>48</option><option value="96">96</option></select>
+      </div>
+    </section>
+
+    <section class="lab-grid">
+      <div class="panel s7">
+        <div class="head"><h2>Learning curve</h2><span class="sub" id="learnLbl">score per generation</span></div>
+        <div class="chart" style="min-height:250px"><canvas id="learnCv" aria-label="Best, elite and average score per generation"></canvas></div>
+        <div class="legend"><span><i style="background:var(--sulfur)"></i>best so far</span><span><i style="background:var(--band)"></i>top 20% average</span><span><i style="background:var(--muted)"></i>generation average</span></div>
+      </div>
+      <div class="panel s5">
+        <div class="head"><h2>Latest generation</h2><span class="sub">each dot is a simulated mission</span></div>
+        <div class="chart" style="min-height:250px"><canvas id="scatterCv" aria-label="Mission life versus launch mass for the latest generation"></canvas></div>
+        <div class="legend"><span><i style="background:var(--band)"></i>fluoropolymer outer film</span><span><i style="background:var(--sulfur)"></i>other outer film</span><span><i style="background:var(--warn)"></i>no outer film</span></div>
+      </div>
+
+      <div class="panel s5">
+        <div class="head"><h2>What it has learned</h2><span class="sub">sampling odds for the next generation</span></div>
+        <div class="learned" id="learned"></div>
+        <p class="cap">Teal marks the current favorite. Tracks show the range it now samples, with the best design's value marked.</p>
+      </div>
+      <div class="panel s7">
+        <div class="head"><h2>Best design so far</h2><span class="sub" id="bestScore">–</span></div>
+        <div style="display:grid;gap:12px;align-content:start">
+          <div class="best-shape"><canvas id="shapeCv" aria-label="Best design drawn to scale"></canvas></div>
+          <div class="stack" id="bestStack"></div>
+          <div class="stats" id="bestStats"></div>
+          <p class="verdict" id="bestVerdict">–</p>
+        </div>
+        <div class="row"><button type="button" class="primary" id="flyBest" disabled>Fly this design</button><span class="sub">Loads it into the flight view.</span></div>
+      </div>
+
+      <div class="panel s8">
+        <div class="head"><h2>Best design over its mission</h2><span class="sub" id="tlLbl">–</span></div>
+        <div class="chart" style="min-height:240px"><canvas id="timelineCv" aria-label="Helium reserve, outer film and fabric strength over the mission"></canvas></div>
+        <div class="legend"><span><i style="background:var(--band)"></i>helium reserve</span><span><i style="background:var(--sulfur)"></i>outer film left</span><span><i style="background:var(--fg)"></i>fabric strength</span><span><i style="background:var(--warn)"></i>safety factor ÷ target</span></div>
+      </div>
+      <div class="panel s4">
+        <div class="head"><h2>The column below</h2><span class="sub">surface to 75 km</span></div>
+        <div class="chart" style="min-height:420px"><canvas id="columnCv" aria-label="Venus atmosphere column with acid clouds, temperatures and material limits"></canvas></div>
+        <p class="cap">Bars show acid droplet density. Ticks mark where each of the best design's materials would fail if it sank.</p>
+      </div>
+    </section>
+
+    <details>
+      <summary>Material assumptions</summary>
+      <p class="cap" style="margin-top:8px">The optimizer can only be as right as this table. Acid ratings come from chemical-resistance charts (fluoropolymers rated excellent in all sulfuric acid strengths) and JPL tests. Erosion rates, helium permeabilities and aging rates are order-of-magnitude estimates, not measured Venus data. Acid rates are at the reference condition: 20 mg/m³ of 96% acid droplets at 25°C. They double for every 10°C hotter.</p>
+      <div class="tablewrap"><table id="matTable"></table></div>
+    </details>
+  </main>
+
+  <footer>Atmosphere: approximate VIRA temperature profile, hydrostatic pressure from 92.1 bar at the surface; acid droplet density scaled to a published total cloud burden of about 0.22 kg/m² (densest in the lower cloud) and acid strength from about 80% at the cloud tops to 99% at the base. Flight: buoyancy, added mass, drag, slack-envelope behavior and burst; the blimp drifts with the wind on an equatorial track. Design lab: superpressure envelope sized to float at the target, Hoerner hull drag for cruise power, solar arrays at 40 W/kg (JPL's goal), batteries for the roughly 80-hour night. A simulation for intuition, not mission design.</footer>
 </div>
 
 <script>
 (() => {
 "use strict";
 // CORE-START ---------------------------------------------------------------
-const R_V = 6051.8e3, MOLAR = 0.04345, RG = 8.314462, G0 = 8.87;
-const V_ENV = 5000, M_DRY = 2650, M_HE = 450, B_MAX = 2500, PUMP_IN = 3, PUMP_OUT = 6;
-const CD = 0.6, A_TOP = 560, ADDED = 0.8;
-const LAPSE = 8.5, H_RHO = 7800, KD = 60, TAU_B = 15; // autopilot tuning
-const SOLAR_DRIFT = 3.77; // m/s, surface motion relative to the Sun (116.75-day solar day)
+const R_V = 6051.8e3, MOLAR = 0.04345, M_HE_MOL = 0.0040026, RG = 8.314462, G0 = 8.87;
+const CD_VERT = 0.6, ADDED = 0.8;
+const LAPSE = 8.5, H_RHO = 7800, KD = 60, TAU_B = 15;              // autopilot tuning
+const COMPRESSOR_KW = 2.5, PUMP_IN = COMPRESSOR_KW*1000/550e3, PUMP_OUT = 0.5; // 0.15 kWh per kg packed to 60 bar
+const SOLAR_DRIFT = 3.77;                                           // m/s, surface vs Sun (116.75-day solar day)
 
-// approximate VIRA equatorial temperature profile [km, K]
 const TPTS = [[0,735.3],[5,696.8],[10,658.2],[15,620.8],[20,580.7],[25,539.2],[30,496.9],[35,455.5],
   [40,417.6],[45,385.4],[50,350.5],[52,331.0],[54,312.0],[55,302.3],[56,293.0],[58,276.0],[60,262.8],
   [62,254.5],[65,243.2],[70,229.8],[75,215.0],[80,196.6],[85,182.0],[90,170.3],[100,175.4]];
-// zonal (westward) wind [km, m/s]
 const UPTS = [[0,0.5],[10,6],[20,22],[30,38],[40,50],[45,55],[50,58],[55,61],[58,66],[60,72],[65,90],[70,100],[80,100]];
+// acid droplet density (mg/m³) and acid strength (wt% H2SO4)
+const AEROSOL = [[0,0],[46,0],[47.5,4],[48.5,40],[50.5,30],[51.5,10],[56.5,9],[57.5,3],[65,2],[70,0.9],[75,0.2],[80,0]];
+const ACIDWT = [[0,99],[47,99],[50,97],[56,90],[62,85],[70,80],[80,75]];
 
 function interp(pts, x){
   if (x <= pts[0][0]) return pts[0][1];
@@ -265,9 +449,16 @@ function interp(pts, x){
   return pts[pts.length-1][1];
 }
 const clamp = (x, a, b) => x < a ? a : x > b ? b : x;
+const smooth = (a, b, x) => { const t = clamp((x-a)/(b-a), 0, 1); return t*t*(3-2*t); };
 const Tbase = zkm => interp(TPTS, zkm);
 const windU = zkm => interp(UPTS, zkm);
+const aerosol = zkm => interp(AEROSOL, zkm);
+const acidWt = zkm => interp(ACIDWT, zkm);
 const gAt = zm => { const r = R_V/(R_V+zm); return G0*r*r; };
+const F2K = f => (f-32)*5/9 + 273.15;
+const K2F = k => (k-273.15)*9/5 + 32;
+const hourAngle = lt => (lt-12)/24*2*Math.PI;
+const daylight = lt => smooth(-0.12, 0.35, Math.cos(hourAngle(lt)));
 
 const LNP = new Float64Array(1001); // ln(Pa) every 0.1 km
 (function(){
@@ -282,9 +473,23 @@ function Pbase(zkm){
   const x = clamp(zkm*10, 0, 1000); const i = Math.min(999, Math.floor(x)); const f = x - i;
   return Math.exp(LNP[i] + (LNP[i+1]-LNP[i])*f);
 }
-// temperature perturbation: thermal tides + gravity wave
+const RHO_TAB = new Float64Array(8001); // 0..80 km every 10 m
+for (let i = 0; i <= 8000; i++){ const z = i/100; RHO_TAB[i] = Pbase(z)*MOLAR/(RG*Tbase(z)); }
+function floatAlt(rho){
+  if (rho >= RHO_TAB[0]) return 0;
+  if (rho <= RHO_TAB[8000]) return 80;
+  let lo = 0, hi = 8000;
+  while (hi - lo > 1){ const mid = (lo+hi) >> 1; if (RHO_TAB[mid] > rho) lo = mid; else hi = mid; }
+  return (lo + (RHO_TAB[lo]-rho)/(RHO_TAB[lo]-RHO_TAB[hi]))/100;
+}
+function altForTemp(K){
+  if (K >= Tbase(0)) return 0; if (K <= Tbase(80)) return 80;
+  let lo = 0, hi = 80;
+  for (let i = 0; i < 40; i++){ const mid = (lo+hi)/2; if (Tbase(mid) > K) lo = mid; else hi = mid; }
+  return (lo+hi)/2;
+}
 function dT(zkm, t, lt, weather){
-  const h = (lt-12)/24*2*Math.PI;
+  const h = hourAngle(lt);
   const A = 2.4*Math.exp(-(((zkm-61)/6)**2));
   let d = A*(0.6*Math.cos(h) + 0.4*Math.cos(2*h));
   if (weather) d += 0.9*Math.sin(2*Math.PI*t/5400 - zkm*2*Math.PI/7)*Math.exp(-(((zkm-57)/8)**2));
@@ -292,22 +497,234 @@ function dT(zkm, t, lt, weather){
 }
 const convEnv = zkm => 0.2 + Math.exp(-(((zkm-52.5)/2)**2));
 function gauss(){ let u = 0; while (u === 0) u = Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*Math.random()); }
-const F2K = f => (f-32)*5/9 + 273.15;
-const K2F = k => (k-273.15)*9/5 + 32;
 
+// ---------- materials ----------
+// acid: µm/day eroded (films) or fraction of strength lost per day (fabrics) when fully exposed at the
+// reference condition (20 mg/m³ of 96% droplets, 25 °C). he: helium permeability, Barrer. tmax: °C.
+const BARRER = 3.35e-16; // mol·m/(m²·s·Pa)
+const FILMS = {
+  PTFE:{name:'PTFE', long:'PTFE (Teflon)', ev:true, rho:2150, he:16, acid:0.0005, tmax:260, fold:1, seam:10, col:'#ece9e2',
+    note:'Fluoropolymer, rated excellent in all sulfuric acid strengths. Cannot be heat-sealed, so seams need adhesive (+10 g/m², more seam leakage).'},
+  FEP:{name:'FEP', long:'FEP (Teflon)', ev:true, rho:2150, he:14, acid:0.0005, tmax:205, fold:1, seam:0, col:'#e9eef0',
+    note:'Heat-sealable fluoropolymer. The acid shield on JPL’s Venus aerobot and the VEGA balloons’ family of material.'},
+  PFA:{name:'PFA', long:'PFA (Teflon)', ev:true, rho:2150, he:15, acid:0.0005, tmax:260, fold:1, seam:0, col:'#e6ebe8',
+    note:'Heat-sealable fluoropolymer like FEP, with a higher temperature limit.'},
+  ETFE:{name:'ETFE', long:'ETFE (Tefzel)', ev:false, rho:1700, he:6, acid:0.005, tmax:150, fold:1, seam:0, col:'#dfe7e3',
+    note:'Tough, partly fluorinated film. Good but not excellent in hot concentrated acid.'},
+  PCTFE:{name:'PCTFE', long:'PCTFE (Aclar)', ev:true, rho:2120, he:1.5, acid:0.002, tmax:150, fold:2, seam:0, col:'#dfe9ee',
+    note:'Fluoropolymer with a far better gas barrier than Teflon. Has been studied for Venus balloons. Stiffer, so folding for launch makes more pinholes.'},
+  PVF:{name:'PVF', long:'PVF (Tedlar)', ev:false, rho:1380, he:0.5, acid:0.03, tmax:107, fold:1.2, seam:0, col:'#e8e2d3',
+    note:'Weather-resistant film with fair acid resistance.'},
+  PARF:{name:'Parylene F', long:'Parylene F coating', ev:true, rho:1650, he:1.5, acid:0.01, tmax:200, fold:3, seam:0, maxT:25, col:'#e4e0d0',
+    note:'Vapor-deposited coating, capped at 25 µm. JPL saw no corrosion after 96 h in 96% acid on solar cells. Thin coatings crack when folded.'},
+  PE:{name:'PE', long:'Polyethylene', ev:true, rho:950, he:4, acid:0.6, tmax:85, fold:1, seam:0, col:'#efece6',
+    note:'Light and cheap, but chemical charts rate it only fair-to-poor in concentrated sulfuric acid, and it softens above about 85°C.'},
+  PET:{name:'PET', long:'PET (Mylar)', ev:true, rho:1390, he:0.8, acid:5, tmax:150, fold:1, seam:0, col:'#e7e3d8',
+    note:'Good helium barrier, but concentrated sulfuric acid dissolves polyester.'},
+  PI:{name:'Kapton', long:'Polyimide (Kapton)', ev:false, rho:1420, he:3, acid:1, tmax:400, fold:1, seam:0, col:'#d98a2b',
+    note:'Handles 400°C but is attacked by concentrated acid. JPL bonds it under FEP.'},
+  EVOH:{name:'EVOH', long:'EVOH', ev:false, rho:1190, he:0.3, acid:3, tmax:100, fold:2, seam:0, col:'#e9e6dc',
+    note:'Excellent gas barrier with poor acid resistance.'},
+  PU:{name:'PU', long:'Polyurethane', ev:true, rho:1200, he:8, acid:3, tmax:90, fold:0.8, seam:0, col:'#d9cfb8',
+    note:'Flexible bladder material with poor acid resistance.'},
+};
+const COATS = {
+  Al:{name:'Aluminum', ev:true, alpha:0.12, heFactor:10, acid:5, col:'#c9ccd1', note:'Vapor-deposited mirror under the outer film. Cuts solar heating and helium leakage. Dissolves fast if acid reaches it.'},
+  Ag:{name:'Silver', ev:true, alpha:0.08, heFactor:8, acid:0.5, col:'#e3e5ea', note:'Better mirror than aluminum (JPL measured 8% solar absorption) and slower to corrode.'},
+};
+const FABRICS = {
+  VEC:{name:'Vectran', long:'Vectran (LCP)', ev:true, spec:2.3e6, creep:0.9, acid:0.002, light:0.003, aging:0, tmax:150, absorb:0.55,
+    cols:['#f2dca6','#d4ad66','#8c6a36'], note:'Liquid-crystal polymer. Held up to sulfuric acid better than Kevlar or polyester in an MIT study. Very low creep. Used in JPL’s inner balloon.'},
+  KEV:{name:'Kevlar', long:'Kevlar (aramid)', ev:true, spec:2.5e6, creep:0.75, acid:0.12, light:0.003, aging:0, tmax:180, absorb:0.5,
+    cols:['#f6e08c','#dfba45','#93751f'], note:'Strong, but aramid fiber is spun from concentrated sulfuric acid, which dissolves it.'},
+  ZYL:{name:'Zylon', long:'Zylon (PBO)', ev:false, spec:3.7e6, creep:0.8, acid:0.15, light:0.02, aging:0.0006, tmax:250, absorb:0.6,
+    cols:['#f1c98c','#d39a44','#8a5a1e'], note:'The strongest fiber here, used for NASA’s long-duration balloon tendons, but it loses strength with age, light and strong acid.'},
+  UHM:{name:'Dyneema', long:'UHMWPE (Dyneema/Spectra)', ev:false, spec:3.6e6, creep:0.35, acid:0.003, light:0.0005, aging:0, tmax:80, absorb:0.25,
+    cols:['#fbf9f4','#e3dfd5','#9b958a'], note:'Very strong and acid-tolerant, but creeps under steady load and melts near 145°C.'},
+  PES:{name:'Polyester', long:'Polyester (Dacron)', ev:true, spec:0.8e6, creep:0.55, acid:0.05, light:0.001, aging:0, tmax:120, absorb:0.3,
+    cols:['#fbf8f2','#e2ddd2','#9a9385'], note:'Common balloon fabric. Weak by comparison and attacked by concentrated acid.'},
+  NYL:{name:'Nylon', long:'Nylon', ev:true, spec:0.75e6, creep:0.45, acid:0.3, light:0.002, aging:0, tmax:100, absorb:0.3,
+    cols:['#fbf8f2','#e2ddd2','#9a9385'], note:'Dissolves in concentrated sulfuric acid.'},
+};
+const OUTER_OPTS = ['PTFE','FEP','PFA','ETFE','PCTFE','PVF','PARF','PE','PET','PI','none'];
+const COAT_OPTS = ['none','Al','Ag'];
+const BARRIER_OPTS = ['PET','PI','PCTFE','EVOH','PVF','PE','PU','none'];
+const FABRIC_OPTS = ['VEC','KEV','ZYL','UHM','PES','NYL'];
+const CONTS = [
+  {k:'tOuter',  label:'Outer film',   min:5,    max:150, log:true, fmt:v => `${v.toFixed(0)} µm`},
+  {k:'tBarrier',label:'Barrier film', min:4,    max:100, log:true, fmt:v => `${v.toFixed(0)} µm`},
+  {k:'gsm',     label:'Fabric weight',min:20,   max:400, log:true, fmt:v => `${v.toFixed(0)} g/m²`},
+  {k:'fineness',label:'Length ÷ width', min:1,  max:6,   log:false,fmt:v => v.toFixed(2)},
+  {k:'sp',      label:'Helium overfill', min:0.03, max:0.5, log:false, fmt:v => `${(v*100).toFixed(0)}%`},
+];
+const FAB_EFF = 0.4;       // half the yarn carries hoop load × 0.8 weave efficiency
+const SEAM_GSM = 15, INNER_PU_GSM = 20, FITTINGS = 0.12, PINHOLE = 0.005, SEAM_LEAK = 2e-5;
+const ARRAY_WKG = 40, BATT_WHKG = 200, BATT_DOD = 0.8, MOTOR_KGKW = 2.5, PROP_ETA = 0.55, HOTEL_W = 300;
+const TRIM_FRAC = 0.10, SUPERHEAT_K = 40, MU_CO2 = 1.5e-5;
+const NIGHT_MARGIN = 0.03, CAUTION_X = 10; // pressure kept in reserve for night gas cooling and weather
+
+function spheroid(V, f){
+  const b = Math.cbrt(3*V/(4*Math.PI*f)), a = f*b;
+  let S;
+  if (f < 1.0001) S = 4*Math.PI*b*b;
+  else { const e = Math.sqrt(1 - 1/(f*f)); S = 2*Math.PI*b*b*(1 + f*Math.asin(e)/e); }
+  return { a, b, L:2*a, D:2*b, S };
+}
+// Hoerner's volumetric drag coefficient for airship hulls
+function hullCdV(f, Re){
+  let cd = (0.172*Math.cbrt(f) + 0.252*Math.pow(f, -1.2) + 1.032*Math.pow(f, -2.7))/Math.pow(Math.max(Re, 1e5), 1/6);
+  if (f < 1.6) cd *= 1 + (1.6 - f)*2.5; // bluff, near-spherical bodies
+  return cd;
+}
+function laminateOf(g){
+  const outer = g.outer !== 'none' ? FILMS[g.outer] : null;
+  const coat = g.coat !== 'none' ? COATS[g.coat] : null;
+  const barrier = g.barrier !== 'none' ? FILMS[g.barrier] : null;
+  const fab = FABRICS[g.fab];
+  const gsm = (outer ? outer.rho*g.tOuter/1000 + outer.seam : 0) + (barrier ? barrier.rho*g.tBarrier/1000 : 0)
+    + g.gsm + SEAM_GSM + INNER_PU_GSM;
+  const strength0 = fab.spec*(g.gsm/1000)*FAB_EFF*fab.creep; // N/m, long-duration allowable
+  return { outer, coat, barrier, fab, gsm, strength0 };
+}
+function designFrom(g, mission){
+  const lam = laminateOf(g);
+  const zT = altForTemp(F2K(mission.targetF));
+  const rhoT = Pbase(zT)*MOLAR/(RG*Tbase(zT)), u = windU(zT);
+  const circ = 2*Math.PI*(R_V + zT*1000), solar = circ/(u + SOLAR_DRIFT), nightH = solar/2/3600;
+  const battKg = HOTEL_W*nightH/(BATT_WHKG*BATT_DOD);
+  const heFrac = (M_HE_MOL/MOLAR)*(1 + g.sp);
+  let V = 3000, sh, envKg = 0, arrayKg = 0, motorKg = 0, propW = 0, rest = 0, mTot = 0;
+  for (let it = 0; it < 60; it++){
+    sh = spheroid(V, g.fineness);
+    envKg = sh.S*lam.gsm/1000*(1 + FITTINGS);
+    const v = mission.airspeed;
+    propW = v > 0 ? 0.5*rhoT*v*v*v*hullCdV(g.fineness, rhoT*v*sh.L/MU_CO2)*Math.pow(V, 2/3)/PROP_ETA : 0;
+    arrayKg = (2*HOTEL_W + propW)/ARRAY_WKG;
+    motorKg = propW/1000*MOTOR_KGKW;
+    rest = mission.payload + envKg + arrayKg + motorKg + battKg;
+    mTot = rest*(1 + TRIM_FRAC)/(1 - heFrac);
+    const Vn = mTot/rhoT;
+    if (!isFinite(Vn) || Vn > 2e6) return null;
+    const done = Math.abs(Vn - V) < 0.05;
+    V = Vn; if (done) break;
+  }
+  sh = spheroid(V, g.fineness);
+  const mHe = mTot*heFrac;
+  return { g, lam, caution: !!mission.caution, V0:V, a:sh.a, b:sh.b, L:sh.L, D:sh.D, S:sh.S, f:g.fineness,
+    rEff: sh.b*(1 - 1/(2*g.fineness*g.fineness)), // hoop radius at the equator of a prolate spheroid
+    zT, rhoT, nightH, envKg, arrayKg, motorKg, battKg, propW, payload:mission.payload,
+    trimKg: rest*TRIM_FRAC, mStruct: rest, mHe, nHe: mHe/M_HE_MOL, mTot };
+}
+// ---- envelope state and aging ----
+// Two zones: A is the intact laminate (1 - pinhole fraction of the area). B is the pinhole spots, where the
+// outer film is missing, so acid works down through the coating, then the barrier, then the fabric.
+function zoneInit(d){ return { coat: d.lam.coat ? 1 : 0, tBar: d.lam.barrier ? d.g.tBarrier : 0, dmg: 1 }; }
+function envInit(d){ return { tOut: d.lam.outer ? d.g.tOuter : 0, A: zoneInit(d), B: zoneInit(d), notes: [] }; }
+function envAlpha(d, st){ return (d.lam.coat && st.A.coat > 0.5) ? d.lam.coat.alpha : d.lam.fab.absorb; }
+function envEps(d, st){
+  const t = st.tOut > 0.5 ? st.tOut : st.A.tBar;
+  return t > 0.5 ? 0.1 + 0.75*(1 - Math.exp(-t/35)) : 0.85;
+}
+const sunFactor = zkm => 0.35 + 0.65*smooth(47, 65, zkm);
+function superheat(d, st, zkm, day){ return Math.min(60, SUPERHEAT_K*envAlpha(d, st)/envEps(d, st)*sunFactor(zkm)*day); }
+function acidFactor(zkm, T){
+  const aer = aerosol(zkm) + (zkm > 30 && zkm < 47.5 ? 1.5 : 0); // acid vapor below the cloud base
+  return (aer/20)*Math.pow(acidWt(zkm)/96, 3)*Math.pow(2, (T - 298)/10);
+}
+function pinholeFrac(d){ return d.lam.outer ? PINHOLE*d.lam.outer.fold : 0; }
+function zonePerm(d, z, tOut){
+  let R = INNER_PU_GSM/1.2*1e-6/(FILMS.PU.he*BARRER);
+  if (tOut > 0.01) R += tOut*1e-6/(d.lam.outer.he*BARRER);
+  if (z.tBar > 0.01) R += z.tBar*1e-6/(d.lam.barrier.he*BARRER);
+  if (d.lam.coat && z.coat > 0.5) R *= d.lam.coat.heFactor;
+  return 1/R;
+}
+function heLeakMolS(d, st, T, Pin, nHe){
+  const pin = pinholeFrac(d);
+  const perm = ((1 - pin)*zonePerm(d, st.A, st.tOut) + pin*zonePerm(d, st.B, 0))*Math.pow(1.3, (T - 298)/10);
+  const seam = nHe*SEAM_LEAK*(d.lam.outer ? d.lam.outer.fold*(1 + d.lam.outer.seam/10) : 1)/86400;
+  return perm*Math.max(0, Pin)*d.S + seam;
+}
+const acidOf = (d, m) => m.acid*((d.caution && !m.ev) ? CAUTION_X : 1); // assume the worst for untested materials
+function erodeZone(d, z, af){ // acid works through the layers in order
+  if (z.coat > 0){ z.coat = Math.max(0, z.coat - acidOf(d, d.lam.coat)*af/0.1); if (z.coat > 0) return; }
+  if (z.tBar > 0.01){ z.tBar = Math.max(0, z.tBar - acidOf(d, d.lam.barrier)*af); if (z.tBar > 0.01) return; }
+  z.dmg *= Math.exp(-acidOf(d, d.lam.fab)*af);
+}
+function fabFactor(d, st){ return d.lam.outer ? Math.min(st.A.dmg, 0.5 + 0.5*st.B.dmg) : st.A.dmg; } // pinhole damage is local
+function ageEnv(d, st, dt, zkm, Tenv, day, Pin, nHe){
+  const af = acidFactor(zkm, Tenv)*dt/86400, tC = Tenv - 273.15, fab = d.lam.fab;
+  if (st.tOut > 0){
+    st.tOut = Math.max(0, st.tOut - acidOf(d, d.lam.outer)*af);
+    if (tC > d.lam.outer.tmax){ st.tOut = 0; st.notes.push(`${d.lam.outer.name} outer film failed at ${tC.toFixed(0)}°C`); }
+  }
+  if (st.tOut <= 0.01) erodeZone(d, st.A, af);
+  if (d.lam.outer) erodeZone(d, st.B, af);
+  const k = fab.aging*dt/86400 + ((d.lam.coat && st.A.coat > 0.5) ? 0 : fab.light*day*sunFactor(zkm)*dt/86400);
+  st.A.dmg *= Math.exp(-k); st.B.dmg *= Math.exp(-k);
+  if (d.lam.barrier && tC > d.lam.barrier.tmax && (st.A.tBar > 0 || st.B.tBar > 0)){ st.A.tBar = st.B.tBar = 0; st.notes.push(`${d.lam.barrier.name} barrier failed at ${tC.toFixed(0)}°C`); }
+  if (tC > fab.tmax && st.A.dmg > 0){ st.A.dmg = st.B.dmg = 0; st.notes.push(`${fab.name} fabric failed at ${tC.toFixed(0)}°C`); }
+  return heLeakMolS(d, st, Tenv, Pin, nHe)*dt;
+}
+function strengthNow(d, st, Tenv){
+  const fab = d.lam.fab, tC = Tenv - 273.15;
+  return d.lam.strength0*fabFactor(d, st)*(1 - 0.5*clamp((tC - 20)/(fab.tmax - 20), 0, 1));
+}
+// ---- one full mission, 6-hour steps ----
+function evaluate(g, mission, record){
+  const d = designFrom(g, mission);
+  if (!d) return { g, score:0, life:0, useful:0, fail:'size', mTot:Infinity, minSF:0, d:null };
+  const st = envInit(d);
+  let nHe = d.nHe, t = 0, lt = 9, useful = 0, fail = null, minSF = Infinity, failAlt = d.zT;
+  const dt = 6*3600, end = mission.goal*86400, targetK = F2K(mission.targetF);
+  const series = record ? [] : null;
+  const sp0 = d.g.sp, s0 = d.lam.strength0;
+  while (t < end){
+    const m = d.mStruct + d.trimKg + nHe*M_HE_MOL;
+    const zf = floatAlt(m/d.V0), T = Tbase(zf), P = Pbase(zf);
+    const day = daylight(lt);
+    const sNight = nHe*MOLAR/m - 1;
+    failAlt = zf;
+    if (sNight < NIGHT_MARGIN){ fail = 'sank'; break; }
+    const shPeak = superheat(d, st, zf, 1);
+    const sPeak = (1 + sNight)*(1 + shPeak/T) - 1;
+    const stress = Math.max(1e-9, sPeak*P*d.rEff);
+    const sf = strengthNow(d, st, T + shPeak)/stress;
+    if (sf < minSF) minSF = sf;
+    if (record) series.push([t/86400, (sNight - NIGHT_MARGIN)/(sp0 - NIGHT_MARGIN), d.lam.outer ? st.tOut/d.g.tOuter : 0, strengthNow(d, st, T)/s0, sf, zf]);
+    if (sf < 1){ fail = 'burst'; break; }
+    const sh = superheat(d, st, zf, day), Tenv = T + sh;
+    const Pin = P*(1 + sNight)*(1 + sh/T); // helium partial pressure inside; none outside
+    nHe *= Math.exp(-ageEnv(d, st, dt, zf, Tenv, day, Pin, nHe)/Math.max(nHe, 1e-9));
+    if (Math.abs(T - targetK) <= 25/9) useful += dt;
+    lt = (lt + (windU(zf) + SOLAR_DRIFT)/(2*Math.PI*(R_V + zf*1000))*24*dt) % 24;
+    t += dt;
+  }
+  const life = t/86400, usefulD = useful/86400;
+  const sfPen = minSF >= mission.minSF ? 1 : Math.pow(Math.max(0, minSF)/mission.minSF, 2);
+  const score = 100*(usefulD/mission.goal)*Math.pow(2000/d.mTot, mission.beta)*sfPen;
+  return { g, d, score, life, useful:usefulD, fail, failAlt, minSF, mTot:d.mTot, notes:st.notes.slice(0, 3), series,
+    heLeakYr: 1 - Math.exp(-365*86400*heLeakMolS(d, envInit(d), Tbase(d.zT), Pbase(d.zT)*(1 + sp0), d.nHe)/d.nHe),
+    superheat0: superheat(d, envInit(d), d.zT, 1) };
+}
+// ---- flight dynamics ----
 function ambient(s, zkm){ return Tbase(zkm) + dT(zkm, s.t, s.lt, s.weather); }
-function rhoAt(s, zkm){ return Pbase(zkm)*MOLAR/(RG*ambient(s, zkm)); }
-
-function makeState(z0, lt0){
-  const s = { t:0, z:z0, v:0, b:0, bdot:0, wn:0, w:0, lt:lt0, laps:0, auto:true, manual:0, weather:true,
-    targetF:70, event:null, inBand:0, total:0, sat:null, T:0, P:0, rho:0, u:0, lift:0 };
-  s.b = clamp(rhoAt(s, z0/1000)*V_ENV - M_DRY - M_HE, 0, B_MAX); // start trimmed
+function makeState(D, z0, lt0){
+  const s = { t:0, z:z0*1000, v:0, b:D.trimKg, bdot:0, wn:0, w:0, lt:lt0, laps:0, auto:true, manual:0, heVent:0, weather:true,
+    targetF:70, event:null, inBand:0, total:0, sat:null, T:0, P:0, rho:0, u:0, lift:0, sh:0, sp:0, sf:Infinity,
+    nHe:D.nHe, env:envInit(D), ageAcc:0, burst:false, lost:null, minZ:z0*1000 };
+  const rho0 = Pbase(z0)*MOLAR/(RG*Tbase(z0));
+  s.b = clamp(rho0*D.V0 - D.mStruct - D.mHe, 0, 2*D.trimKg);
   return s;
 }
-function step(s, dt){
+function step(s, D, dt){
+  if (s.lost) return;
   const zkm = s.z/1000;
   const T = ambient(s, zkm), P = Pbase(zkm), rho = P*MOLAR/(RG*T), g = gAt(s.z);
-  // vertical air motion: Ornstein-Uhlenbeck convection, strongest near 52 km
+  const day = daylight(s.lt);
+  const sh = superheat(D, s.env, zkm, day), Tg = T + sh;
+  const Vgas = Math.max(0, s.nHe)*RG*Tg/P, V = Math.max(1e-3, Math.min(D.V0, Vgas));
+  s.sp = Vgas/D.V0 - 1;
   if (s.weather){ const tau = 90; s.wn += (-s.wn/tau)*dt + Math.sqrt(2*dt/tau)*gauss(); }
   else s.wn *= Math.max(0, 1 - dt/30);
   let w = s.wn*1.3*convEnv(zkm);
@@ -316,91 +733,178 @@ function step(s, dt){
     if (k >= 1) s.event = null; else if (k >= 0) w += s.event.amp*Math.sin(Math.PI*k);
   }
   s.w = w;
-  const m = M_DRY + M_HE + s.b, mEff = m + ADDED*rho*V_ENV;
-  const vr = s.v - w;
-  const F = (rho*V_ENV - m)*g - 0.5*rho*CD*A_TOP*Math.abs(vr)*vr;
-  s.v += F/mEff*dt; s.z += s.v*dt;
+  const m = D.mStruct + s.nHe*M_HE_MOL + s.b, mEff = m + ADDED*rho*V;
+  const Atop = Math.PI*D.a*D.b*Math.pow(V/D.V0, 2/3);
+  // drag handled semi-implicitly so dense deep air can't destabilize large time steps
+  const k = 0.5*rho*CD_VERT*Atop*Math.abs(s.v - w)/mEff;
+  s.v = (s.v + (rho*V - m)*g/mEff*dt + k*dt*w)/(1 + k*dt);
+  if (!isFinite(s.v)) s.v = 0;
+  s.z += s.v*dt;
+  if (s.z < s.minZ) s.minZ = s.z;
+  if (s.z <= 0){ s.z = 0; s.v = 0; s.lost = 'surface'; }
   // ballast control
-  let bdot = 0; const targetK = F2K(s.targetF);
+  let bdot = 0; const targetK = F2K(s.targetF), bMax = 2*D.trimKg;
   if (s.auto){
-    const dz = clamp((T - targetK)/LAPSE*1000, -1500, 1500);      // too hot -> climb
-    const bCmd = rho*Math.exp(-dz/H_RHO)*V_ENV - M_DRY - M_HE + KD*s.v; // trim for target + damping
+    const dz = clamp((T - targetK)/LAPSE*1000, -1500, 1500);
+    const bCmd = rho*Math.exp(-dz/H_RHO)*D.V0 - D.mStruct - s.nHe*M_HE_MOL + KD*s.v;
     bdot = clamp((bCmd - s.b)/TAU_B, -PUMP_OUT, PUMP_IN);
-    s.sat = (s.b <= 1 && bCmd < 0) ? 'light' : (s.b >= B_MAX-1 && bCmd > B_MAX) ? 'heavy' : null;
+    s.sat = (s.b <= 1 && bCmd < 0) ? 'light' : (s.b >= bMax - 1 && bCmd > bMax) ? 'heavy' : null;
   } else {
     bdot = s.manual > 0 ? PUMP_IN : s.manual < 0 ? -PUMP_OUT : 0;
     s.sat = null;
   }
-  const nb = clamp(s.b + bdot*dt, 0, B_MAX); s.bdot = (nb - s.b)/dt; s.b = nb;
+  const nb = clamp(s.b + bdot*dt, 0, bMax); s.bdot = (nb - s.b)/dt; s.b = nb;
+  // envelope aging, helium loss, burst
+  s.ageAcc += dt;
+  if (s.ageAcc >= 60){
+    const da = s.ageAcc; s.ageAcc = 0;
+    s.nHe *= Math.exp(-ageEnv(D, s.env, da, zkm, Tg, day, P*(1 + Math.max(0, s.sp)), s.nHe)/Math.max(s.nHe, 1e-9));
+    const stress = Math.max(0, s.sp)*P*D.rEff;
+    s.sf = stress > 0 ? strengthNow(D, s.env, Tg)/stress : Infinity;
+    if (s.sf < 1 && !s.burst){ s.burst = true; s.env.notes.push('envelope burst under daytime pressure'); }
+    if (s.burst) s.nHe *= Math.exp(-da/90);
+    if (s.heVent) s.nHe *= Math.exp(-da/(40*3600));
+  }
   // horizontal drift with the super-rotation
   const u = windU(zkm), circ = 2*Math.PI*(R_V + s.z);
   s.lt = (s.lt + (u + SOLAR_DRIFT)/circ*24*dt) % 24;
   s.laps += u/circ*dt;
   s.t += dt;
-  s.T = T; s.P = P; s.rho = rho; s.u = u; s.lift = rho*V_ENV - m;
-  if (Math.abs(T - targetK) < 10/9) s.inBand += dt;
+  s.T = T; s.P = P; s.rho = rho; s.u = u; s.lift = rho*V - m; s.sh = sh;
+  if (Math.abs(T - targetK) < 25/9) s.inBand += dt;
   s.total += dt;
 }
 function isothermAlt(s, K){
-  // scan down from 70 km for the first crossing
-  let prev = ambient(s, 70), z = 70;
+  let prev = ambient(s, 70);
   for (let zz = 69.98; zz >= 40; zz -= 0.02){
     const T = ambient(s, zz);
-    if ((prev - K)*(T - K) <= 0){ return zz + 0.02*(T - K)/(T - prev); }
-    prev = T; z = zz;
+    if ((prev - K)*(T - K) <= 0) return zz + 0.02*(T - K)/(T - prev);
+    prev = T;
   }
   return null;
 }
+// ---- cross-entropy optimizer ----
+const CATS = [['outer', OUTER_OPTS, 'Outer film'], ['coat', COAT_OPTS, 'Mirror coating'], ['barrier', BARRIER_OPTS, 'Helium barrier'], ['fab', FABRIC_OPTS, 'Strength fabric']];
+const denorm = (c, u) => c.log ? c.min*Math.pow(c.max/c.min, u) : c.min + (c.max - c.min)*u;
+const norm = (c, x) => c.log ? Math.log(x/c.min)/Math.log(c.max/c.min) : (x - c.min)/(c.max - c.min);
+const mean = a => a.reduce((s, x) => s + x, 0)/Math.max(1, a.length);
+function newCEM(popN){
+  return { popN, probs: CATS.map(([, o]) => o.map(() => 1/o.length)), mu: CONTS.map(() => 0.5), sd: CONTS.map(() => 0.3),
+    gen:0, evals:0, best:null, bestRec:null, hist:[], pop:[], lastPop:[], queue:[], stall:0, done:false };
+}
+function pickIdx(p){ let r = Math.random(), i = 0; for (; i < p.length - 1; i++){ r -= p[i]; if (r <= 0) break; } return i; }
+function sampleG(c){
+  const g = {};
+  CATS.forEach(([k, o], i) => { g[k] = o[pickIdx(c.probs[i])]; });
+  CONTS.forEach((cc, i) => { g[cc.k] = denorm(cc, clamp(c.mu[i] + c.sd[i]*gauss(), 0, 1)); });
+  if (g.outer !== 'none' && FILMS[g.outer].maxT) g.tOuter = Math.min(g.tOuter, FILMS[g.outer].maxT);
+  return g;
+}
+function startGen(c){ c.queue = []; c.pop = []; if (c.best) c.queue.push({ ...c.best.g }); while (c.queue.length < c.popN) c.queue.push(sampleG(c)); }
+function finishGen(c, mission){
+  c.pop.sort((a, b) => b.score - a.score);
+  const nE = Math.max(2, Math.round(c.popN*0.2)), el = c.pop.slice(0, nE), A = 0.35;
+  CATS.forEach(([k, o], i) => {
+    const cnt = o.map(() => 0); el.forEach(r => cnt[o.indexOf(r.g[k])]++);
+    let s = 0; const np = c.probs[i].map((p, j) => { const v = Math.max(0.02, (1 - A)*p + A*cnt[j]/nE); s += v; return v; });
+    c.probs[i] = np.map(v => v/s);
+  });
+  CONTS.forEach((cc, i) => {
+    const xs = el.map(r => norm(cc, r.g[cc.k])), m = mean(xs);
+    const sd = Math.sqrt(mean(xs.map(x => (x - m)*(x - m))));
+    c.mu[i] = (1 - A)*c.mu[i] + A*m; c.sd[i] = Math.max(0.03, (1 - A)*c.sd[i] + A*sd);
+  });
+  const top = c.pop[0];
+  if (!c.best || top.score > c.best.score + 1e-9){ c.best = top; c.bestRec = evaluate(top.g, mission, true); c.stall = 0; } else c.stall++;
+  c.gen++;
+  c.hist.push({ gen:c.gen, best:c.best.score, elite:mean(el.map(r => r.score)), pop:mean(c.pop.map(r => r.score)) });
+  c.lastPop = c.pop;
+  if (c.gen >= 250 || (c.stall >= 30 && Math.max(...c.sd) < 0.07)) c.done = true;
+  startGen(c);
+}
+function evalSome(c, mission, budgetMs){
+  const t0 = performance.now();
+  while (c.queue.length && performance.now() - t0 < budgetMs){ c.pop.push(evaluate(c.queue.shift(), mission, false)); c.evals++; }
+  if (!c.queue.length){ finishGen(c, mission); return true; }
+  return false;
+}
 // CORE-END -----------------------------------------------------------------
 
-// ---------- state ----------
-const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-let S = makeState(55250, 8.5);
-let speed = 60, running = !reduceMotion, unit = 'F';
-const HIST_DT = 5, HIST_N = Math.ceil(7*86400/HIST_DT);
-const hT = new Float32Array(HIST_N), hZ = new Float32Array(HIST_N), hTarget = new Float32Array(HIST_N);
-let hHead = 0, hCount = 0, hNext = 0;
-const trail = [];
-function pushHist(){
-  hT[hHead] = S.T; hZ[hHead] = S.z; hTarget[hHead] = F2K(S.targetF);
-  hHead = (hHead + 1) % HIST_N; if (hCount < HIST_N) hCount++;
-}
-
-// ---------- helpers ----------
+// ================= shared UI helpers =================
 const $ = id => document.getElementById(id);
 const css = getComputedStyle(document.documentElement);
 const tok = n => css.getPropertyValue(n).trim();
 const C = { fg:tok('--fg'), muted:tok('--muted'), line:tok('--line'), sulfur:tok('--sulfur'), band:tok('--band'), warn:tok('--warn'), panel:tok('--panel'), panel2:tok('--panel-2') };
 const FONT_MONO = 'IBM Plex Mono, ui-monospace, Consolas, monospace';
 const FONT_DISP = 'Saira Semi Condensed, Arial Narrow, sans-serif';
+let unit = 'F';
 const tU = k => unit === 'F' ? K2F(k) : k - 273.15;
 const fmtT = (k, d=1) => tU(k).toFixed(d) + (unit === 'F' ? '°F' : '°C');
 const fmtTarget = f => unit === 'F' ? `${f}°F` : `${((f-32)*5/9).toFixed(1)}°C`;
-const smooth = (a, b, x) => { const t = clamp((x-a)/(b-a), 0, 1); return t*t*(3-2*t); };
 const mix = (a, b, t) => [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
 const rgb = (c, a=1) => `rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
-const hourAngle = lt => (lt-12)/24*2*Math.PI;
-const daylight = lt => smooth(-0.12, 0.35, Math.cos(hourAngle(lt)));
 const fmtHM = h => { const hh = Math.floor(h), mm = Math.floor((h-hh)*60); return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`; };
+const fmtKg = kg => kg >= 10000 ? `${(kg/1000).toFixed(1)} t` : `${Math.round(kg).toLocaleString()} kg`;
 function fmtDur(sec){
   if (sec < 3600) return `${Math.round(sec/60)} min`;
   if (sec < 86400*2) return `${(sec/3600).toFixed(1)} h`;
   return `${(sec/86400).toFixed(1)} days`;
 }
-
+const optName = (k, v) => k === 'coat' ? (v === 'none' ? 'None' : COATS[v].name) : k === 'fab' ? FABRICS[v].name : (v === 'none' ? 'None' : FILMS[v].name);
+function designLabel(g){
+  const p = [];
+  if (g.outer !== 'none') p.push(`${FILMS[g.outer].name} ${g.tOuter.toFixed(0)} µm`);
+  if (g.coat !== 'none') p.push(COATS[g.coat].name);
+  if (g.barrier !== 'none') p.push(`${FILMS[g.barrier].name} ${g.tBarrier.toFixed(0)} µm`);
+  p.push(`${FABRICS[g.fab].name} ${g.gsm.toFixed(0)} g/m²`);
+  return p.join(' · ');
+}
 function fitCanvas(cv){
   const r = cv.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
   const w = Math.max(10, Math.round(r.width)), h = Math.max(10, Math.round(r.height));
   if (cv.width !== Math.round(w*dpr) || cv.height !== Math.round(h*dpr)){ cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr); }
   const ctx = cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
-  cv._w = w; cv._h = h; return ctx;
+  cv._w = r.width > 0 ? w : 0; cv._h = h; cv._ctx = ctx; return ctx;
 }
-const sceneCv = $('scene'), profCv = $('profile'), histCv = $('history'), globeCv = $('globe');
-let sctx = fitCanvas(sceneCv), pctx = fitCanvas(profCv), hctx = fitCanvas(histCv), gctx = fitCanvas(globeCv);
-new ResizeObserver(() => { sctx = fitCanvas(sceneCv); pctx = fitCanvas(profCv); hctx = fitCanvas(histCv); gctx = fitCanvas(globeCv); drawAllPanels(); drawScene(0); })
-  .observe(document.body);
+function halo(c, x, y, r, col, a){
+  const g = c.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, rgb(col, a)); g.addColorStop(.25, rgb(col, a*0.6)); g.addColorStop(1, rgb(col, 0));
+  c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, Math.PI*2); c.fill();
+}
+function roundRect(c, x, y, w, h, r){
+  c.beginPath(); c.moveTo(x+r, y); c.arcTo(x+w, y, x+w, y+h, r); c.arcTo(x+w, y+h, x, y+h, r); c.arcTo(x, y+h, x, y, r); c.arcTo(x, y, x+w, y, r); c.closePath();
+}
 
-// ---------- scene assets ----------
+// ================= FLIGHT =================
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const DEFAULT_G = { outer:'FEP', coat:'Ag', barrier:'PCTFE', fab:'VEC', tOuter:20, tBarrier:15, gsm:150, fineness:2.6, sp:0.14 };
+const DEFAULT_MISSION = { targetF:70, payload:1500, airspeed:8, goal:360, beta:0.35, minSF:3, caution:true };
+let flightG = { ...DEFAULT_G };
+let FD = designFrom(flightG, DEFAULT_MISSION);
+let S = null;
+let speed = 60, running = !reduceMotion;
+const HIST_DT = 5, HIST_N = Math.ceil(7*86400/HIST_DT);
+const hT = new Float32Array(HIST_N), hZ = new Float32Array(HIST_N);
+let hHead = 0, hCount = 0, hNext = 0;
+const trail = [];
+function pushHist(){ hT[hHead] = S.T; hZ[hHead] = S.z; hHead = (hHead + 1) % HIST_N; if (hCount < HIST_N) hCount++; }
+function launch(keepTarget){
+  const tF = S ? S.targetF : 70;
+  const z0 = FD.g.sp > 0.06 ? Math.max(1, FD.zT - 0.3) : FD.zT;
+  S = makeState(FD, z0, 8.5);
+  if (keepTarget) S.targetF = tF;
+  S.auto = $('auto').checked; S.weather = $('weather').checked;
+  hHead = 0; hCount = 0; trail.length = 0;
+  step(S, FD, 0.01); pushHist(); hNext = S.t + HIST_DT; camZ = S.z/1000;
+  $('lostBox').hidden = true;
+  $('hudDesign').textContent = `${designLabel(FD.g)} · ${Math.round(FD.V0).toLocaleString()} m³ · blimp drawn ~10× scale`;
+}
+
+const sceneCv = $('scene'), profCv = $('profile'), histCv = $('history'), globeCv = $('globe');
+const labCvs = ['learnCv', 'scatterCv', 'shapeCv', 'timelineCv', 'columnCv'].map($);
+function fitAll(){ [sceneCv, profCv, histCv, globeCv, ...labCvs].forEach(fitCanvas); }
+
+// scene assets
 function makeSprite(seed, col){
   const cv = document.createElement('canvas'); cv.width = 256; cv.height = 128;
   const c = cv.getContext('2d'); let r = seed;
@@ -416,74 +920,76 @@ function makeSprite(seed, col){
 const SPR_L = [1,2,3,4].map(i => makeSprite(i*7919, [252,244,226]));
 const SPR_D = [1,2,3,4].map(i => makeSprite(i*7919, [176,138,88]));
 const clouds = [];
-(function(){
-  for (let i = 0; i < 420; i++){
-    const z = 46000 + Math.random()*20000;
-    clouds.push({ x:(Math.random()-0.5)*6000, z, rx:250 + Math.random()*900, ry:60 + Math.random()*200,
-      p:0.65 + Math.random()*0.8, a:0.5 + Math.random()*0.5, s:i % 4, ph:Math.random()*6.28, dv:(Math.random()-0.5)*3 });
-  }
-  clouds.sort((a, b) => a.p - b.p);
-})();
+for (let i = 0; i < 420; i++){
+  clouds.push({ x:(Math.random()-0.5)*6000, z:46000 + Math.random()*20000, rx:250 + Math.random()*900, ry:60 + Math.random()*200,
+    p:0.65 + Math.random()*0.8, a:0.5 + Math.random()*0.5, s:i % 4, ph:Math.random()*6.28, dv:(Math.random()-0.5)*3 });
+}
+clouds.sort((a, b) => a.p - b.p);
+const drops = Array.from({ length:180 }, () => ({ x:Math.random(), y:Math.random(), s:Math.random() }));
 function layerDensity(zkm){
-  if (zkm < 47.5) return 0.35;
+  if (zkm < 47.5) return 0.35*smooth(40, 47.5, zkm);
   if (zkm < 50.5) return 0.95;
   if (zkm < 56.5) return 0.6 - 0.25*smooth(55.5, 56.5, zkm);
   if (zkm < 70) return 0.28*(1 - smooth(62, 70, zkm));
   return 0.02;
 }
-const SKY = [[44,[128,74,38]],[47.5,[170,110,58]],[50.5,[214,172,108]],[54,[232,206,150]],[56.5,[236,204,140]],[58,[228,182,112]],[63,[214,152,82]],[70,[188,118,58]]];
+const SKY = [[0,[92,40,20]],[10,[112,52,26]],[25,[132,66,32]],[40,[146,80,40]],[44,[128,74,38]],[47.5,[170,110,58]],[50.5,[214,172,108]],
+  [54,[232,206,150]],[56.5,[236,204,140]],[58,[228,182,112]],[63,[214,152,82]],[70,[188,118,58]]];
 function skyAt(zkm){
   if (zkm <= SKY[0][0]) return SKY[0][1];
   for (let i = 1; i < SKY.length; i++) if (zkm <= SKY[i][0]){ const a = SKY[i-1], b = SKY[i]; return mix(a[1], b[1], (zkm-a[0])/(b[0]-a[0])); }
   return SKY[SKY.length-1][1];
 }
 const FOG = [244,232,204];
-function lightColor(d){
+function lightColor(d, zkm){
   const night = [46,34,50], twi = [222,146,96], day = [255,250,242];
-  return d < 0.5 ? mix(night, twi, d*2) : mix(twi, day, (d-0.5)*2);
+  const c = d < 0.5 ? mix(night, twi, d*2) : mix(twi, day, (d-0.5)*2);
+  return mix(c, mix(c, [120,90,80], 0.6), 1 - smooth(20, 46, zkm)); // dimmer deep below the clouds
 }
 const particles = [];
-let camZ = S.z/1000, lastBlink = 0;
+let camZ = 56;
 
-function roundRect(c, x, y, w, h, r){
-  c.beginPath(); c.moveTo(x+r, y); c.arcTo(x+w, y, x+w, y+h, r); c.arcTo(x+w, y+h, x, y+h, r); c.arcTo(x, y+h, x, y, r); c.arcTo(x, y, x+w, y, r); c.closePath();
-}
 function drawBlimp(c, L, pass, d, now){
-  const a = L/2, b = L/7.2;
-  const gw = a*0.56, gh = b*0.42, gy = b*0.98;
+  const f = Math.max(1, FD.f), a = L/2, b = a/f;
+  const gw = Math.min(a*0.56, b*1.6), gh = Math.max(b*0.42, L*0.05), gy = b*0.98;
+  const env = S.env;
   if (pass === 'body'){
-    c.fillStyle = '#8c8475';
-    c.beginPath(); c.moveTo(-a*0.55,-b*0.72); c.lineTo(-a*0.94,-b*1.6); c.lineTo(-a*1.04,-b*1.55); c.lineTo(-a*0.99,-b*0.22); c.closePath(); c.fill();
-    c.beginPath(); c.moveTo(-a*0.55, b*0.72); c.lineTo(-a*0.94, b*1.6); c.lineTo(-a*1.04, b*1.55); c.lineTo(-a*0.99, b*0.22); c.closePath(); c.fill();
-    // struts
+    if (f > 1.6){
+      c.fillStyle = '#8c8475';
+      c.beginPath(); c.moveTo(-a*0.55,-b*0.72); c.lineTo(-a*0.94,-b*1.6); c.lineTo(-a*1.04,-b*1.55); c.lineTo(-a*0.99,-b*0.22); c.closePath(); c.fill();
+      c.beginPath(); c.moveTo(-a*0.55, b*0.72); c.lineTo(-a*0.94, b*1.6); c.lineTo(-a*1.04, b*1.55); c.lineTo(-a*0.99, b*0.22); c.closePath(); c.fill();
+    }
     c.strokeStyle = '#6d6457'; c.lineWidth = Math.max(1, L/260);
     c.beginPath(); c.moveTo(-gw*0.3, b*0.9); c.lineTo(-gw*0.25, gy+2); c.moveTo(gw*0.3, b*0.9); c.lineTo(gw*0.25, gy+2); c.stroke();
-    // envelope
+    const cols = (FD.lam.coat && env.A.coat > 0.5) ? ['#f8f9fb','#c8ccd2','#7a8089'] : FD.lam.fab.cols;
     const gr = c.createLinearGradient(0, -b, 0, b);
-    gr.addColorStop(0, '#fcf9f2'); gr.addColorStop(.45, '#e7e0d1'); gr.addColorStop(1, '#978c79');
-    c.fillStyle = gr; c.beginPath(); c.ellipse(0, 0, a, b, 0, 0, Math.PI*2); c.fill();
+    gr.addColorStop(0, cols[0]); gr.addColorStop(.45, cols[1]); gr.addColorStop(1, cols[2]);
+    const squash = S.sp < 0 ? clamp(1 + S.sp*1.5, 0.55, 1) : 1; // a slack envelope sags
+    c.fillStyle = gr; c.beginPath(); c.ellipse(0, 0, a, b*squash, 0, 0, Math.PI*2); c.fill();
     c.save(); c.clip();
     const gr2 = c.createLinearGradient(0, 0, 0, b);
     gr2.addColorStop(0, 'rgba(232,186,96,0)'); gr2.addColorStop(1, 'rgba(232,180,90,.38)');
     c.fillStyle = gr2; c.fillRect(-a, 0, 2*a, b);
+    const worn = FD.lam.outer ? 1 - env.tOut/FD.g.tOuter : 0.6;
+    if (worn > 0.02){ c.fillStyle = `rgba(110,72,28,${Math.min(0.55, worn*0.6)})`; c.fillRect(-a, -b, 2*a, 2*b); }
     c.fillStyle = '#2f4266'; c.beginPath(); c.ellipse(-a*0.05, -b*1.02, a*0.58, b*0.26, 0, 0, Math.PI*2); c.fill();
     c.strokeStyle = 'rgba(160,190,230,.35)'; c.lineWidth = 1;
     for (let k = -4; k <= 4; k++){ c.beginPath(); c.moveTo(-a*0.05 + k*a*0.12, -b); c.lineTo(-a*0.05 + k*a*0.12, -b*0.78); c.stroke(); }
     c.fillStyle = '#d8893c'; c.fillRect(a*0.52, -b, a*0.055, 2*b);
     c.strokeStyle = 'rgba(90,78,62,.22)';
-    for (let k = -3; k <= 3; k++){ const x = k*a/4.2; const hh = b*Math.sqrt(1 - (x/a)**2); c.beginPath(); c.ellipse(x, 0, a*0.05, hh, 0, -Math.PI/2, Math.PI/2); c.stroke(); }
+    for (let k = -3; k <= 3; k++){ const x = k*a/4.2; const hh = b*Math.sqrt(Math.max(0, 1 - (x/a)**2)); c.beginPath(); c.ellipse(x, 0, a*0.05, hh, 0, -Math.PI/2, Math.PI/2); c.stroke(); }
     c.restore();
-    c.fillStyle = '#7a7266';
-    c.beginPath(); c.moveTo(-a*0.6, -b*0.06); c.lineTo(-a*1.07, -b*0.13); c.lineTo(-a*1.07, b*0.13); c.lineTo(-a*0.6, b*0.1); c.closePath(); c.fill();
-    c.fillStyle = 'rgba(80,62,44,.75)'; c.font = `600 ${Math.max(10, b*0.36)}px ${FONT_DISP}`; c.textAlign = 'center'; c.textBaseline = 'middle';
+    if (f > 1.6){
+      c.fillStyle = '#7a7266';
+      c.beginPath(); c.moveTo(-a*0.6, -b*0.06); c.lineTo(-a*1.07, -b*0.13); c.lineTo(-a*1.07, b*0.13); c.lineTo(-a*0.6, b*0.1); c.closePath(); c.fill();
+    }
+    c.fillStyle = 'rgba(80,62,44,.75)'; c.font = `600 ${Math.max(10, Math.min(b*0.36, 22))}px ${FONT_DISP}`; c.textAlign = 'center'; c.textBaseline = 'middle';
     c.fillText('VA-01', a*0.15, b*0.2);
-    // gondola
     const gg = c.createLinearGradient(0, gy, 0, gy+gh);
     gg.addColorStop(0, '#e2dbcc'); gg.addColorStop(1, '#8e8574');
     c.fillStyle = gg; roundRect(c, -gw/2, gy, gw, gh, gh*0.45); c.fill();
     c.fillStyle = '#3b332c';
     for (let k = 0; k < 6; k++) c.fillRect(-gw*0.36 + k*gw*0.13, gy + gh*0.28, gw*0.08, gh*0.3);
-    // propellers
     const spin = now*0.03;
     for (const sx of [-1, 1]){
       const px = sx*(gw/2 + gh*0.35), py = gy + gh*0.5;
@@ -492,48 +998,40 @@ function drawBlimp(c, L, pass, d, now){
       c.beginPath(); c.ellipse(px, py, gh*0.1, gh*0.85, 0, 0, Math.PI*2); c.fill();
     }
   } else {
+    if (S.lost) return;
     const glow = 0.18 + 0.7*(1-d);
     c.fillStyle = `rgba(255,204,128,${glow})`;
     for (let k = 0; k < 6; k++) c.fillRect(-gw*0.36 + k*gw*0.13, gy + gh*0.28, gw*0.08, gh*0.3);
-    const blink = (now % 1400) < 90;
-    if (blink){ halo(c, -a*0.95, -b*1.6, b*0.5, [255,255,255], 0.9); }
+    if ((now % 1400) < 90) halo(c, -a*0.95, -b*1.6, Math.max(8, b*0.5), [255,255,255], 0.9);
     const red = 0.5 + 0.5*Math.sin(now/300);
-    halo(c, 0, gy + gh, b*0.3, [255,70,50], 0.35 + 0.5*red*(1-d*0.5));
-    halo(c, a*0.98, 0, b*0.22, [120,255,140], 0.5*(1-d*0.6));
+    halo(c, 0, gy + gh, Math.max(6, b*0.3), [255,70,50], 0.35 + 0.5*red*(1-d*0.5));
+    halo(c, a*0.98, 0, Math.max(5, b*0.22), [120,255,140], 0.5*(1-d*0.6));
   }
-}
-function halo(c, x, y, r, col, a){
-  const g = c.createRadialGradient(x, y, 0, x, y, r);
-  g.addColorStop(0, rgb(col, a)); g.addColorStop(.25, rgb(col, a*0.6)); g.addColorStop(1, rgb(col, 0));
-  c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, Math.PI*2); c.fill();
 }
 
 function drawScene(dtReal){
-  const c = sctx, W = sceneCv._w, H = sceneCv._h; if (!W) return;
+  const c = sceneCv._ctx, W = sceneCv._w, H = sceneCv._h; if (!W) return;
   const now = performance.now();
   const zb = S.z/1000;
-  camZ += (zb - camZ)*Math.min(1, dtReal*2.5 + (dtReal === 0 ? 1 : 0));
+  if (Math.abs(zb - camZ) > 0.6 || dtReal === 0) camZ = zb; else camZ += (zb - camZ)*Math.min(1, dtReal*2.5);
   const SPAN = 1.6, pxKm = H/SPAN, pxM_h = W/3000;
   const yOf = zkm => H/2 - (zkm - camZ)*pxKm;
   const zOf = y => camZ + (H/2 - y)/pxKm;
   const d = daylight(S.lt);
 
-  // sky + in-cloud haze
   const g = c.createLinearGradient(0, 0, 0, H);
   for (let i = 0; i <= 8; i++){ const z = zOf(H*i/8); g.addColorStop(i/8, rgb(mix(skyAt(z), FOG, layerDensity(z)*0.6))); }
   c.fillStyle = g; c.fillRect(0, 0, W, H);
 
-  // the Sun, diffused through the cloud above (rises in the west = left)
   if (d > 0.02){
     const h = hourAngle(S.lt);
     const sx = W*(0.5 + 0.46*Math.sin(h)), sy = H*(0.95 - 0.85*Math.max(0, Math.cos(h)));
-    const vis = (0.3 + 0.6*smooth(55.5, 60, camZ))*d;
+    const vis = (0.3 + 0.6*smooth(55.5, 60, camZ))*d*smooth(40, 52, camZ);
     halo(c, sx, sy, Math.max(W, H)*0.45, [255,240,205], 0.55*vis);
     halo(c, sx, sy, Math.min(W, H)*0.07, [255,252,236], 0.9*vis*smooth(55.8, 58, camZ) + 0.2*vis);
   }
 
-  // clouds: drift relative to the blimp (it moves with the wind)
-  const vis = Math.min(speed, 30)*dtReal;
+  const visDt = Math.min(speed, 30)*dtReal;
   const uB = windU(zb);
   const drawCloud = cl => {
     const y = yOf(cl.z/1000), hpx = cl.ry*2*pxKm/1000*cl.p, wpx = cl.rx*2*pxM_h*cl.p;
@@ -545,25 +1043,43 @@ function drawScene(dtReal){
   };
   const HALF = 3000;
   for (const cl of clouds){
-    cl.x -= ((windU(cl.z/1000) - uB) + cl.dv)*vis;
+    cl.x -= ((windU(cl.z/1000) - uB) + cl.dv)*visDt;
     if (cl.x < -HALF) cl.x += 2*HALF; else if (cl.x > HALF) cl.x -= 2*HALF;
   }
   let i = 0;
   for (; i < clouds.length && clouds[i].p < 1.15; i++) drawCloud(clouds[i]);
 
-  // blimp
-  const L = Math.min(W*0.34, 300, H*0.62);
+  // acid droplets: count follows the local droplet density
+  const nDrops = Math.round(Math.min(drops.length, aerosol(camZ)*4.5));
+  c.globalAlpha = 1;
+  for (let k = 0; k < nDrops; k++){
+    const p = drops[k];
+    if (!reduceMotion){ p.y += (0.004 + p.s*0.006)*Math.min(speed, 30)*dtReal; p.x -= (0.01 + p.s*0.01)*Math.min(speed, 30)*dtReal*0.3; }
+    if (p.y > 1) p.y -= 1; if (p.x < 0) p.x += 1;
+    c.fillStyle = `rgba(255,238,175,${0.35 + p.s*0.4})`;
+    c.fillRect(p.x*W, p.y*H, 1 + p.s*1.6, 2 + p.s*3);
+  }
+
+  // ground, when close enough to see it
+  const yG = yOf(0);
+  if (yG < H + 40){
+    const gg = c.createLinearGradient(0, yG - 120, 0, H);
+    gg.addColorStop(0, 'rgba(255,110,40,0)'); gg.addColorStop(0.5, 'rgba(255,110,40,.25)'); gg.addColorStop(1, 'rgba(255,90,30,.35)');
+    c.fillStyle = gg; c.fillRect(0, yG - 120, W, H - yG + 120);
+    c.fillStyle = '#2b130b'; c.fillRect(0, yG, W, Math.max(0, H - yG));
+  }
+
+  const L = Math.min(W*0.34, 300, H*0.5*Math.max(1, FD.f)/1.4);
   const bx = W/2, by = yOf(zb);
   const tilt = clamp(S.v*0.06, -0.12, 0.12);
   c.globalAlpha = 1;
   c.save(); c.translate(bx, by); c.rotate(-tilt);
   drawBlimp(c, L, 'body', d, now);
-  // ballast particles (vent plume up top, intake swirl under the gondola)
-  if (running && !reduceMotion){
-    const rate = Math.abs(S.bdot)/PUMP_OUT;
+  if (running && !reduceMotion && !S.lost){
+    const rate = S.bdot < 0 ? -S.bdot/PUMP_OUT : S.bdot/PUMP_IN*0.4;
     if (Math.random() < rate*dtReal*40){
-      if (S.bdot < 0) particles.push({ x:L*0.06, y:-L/7.2, vx:(Math.random()-0.5)*14, vy:-26 - Math.random()*20, life:1, r:3, k:'vent' });
-      else particles.push({ x:L*0.2 + Math.cos(now)*20, y:L/7.2*1.55 + 18, vx:-30, vy:-14, life:1, r:1.6, k:'in' });
+      if (S.bdot < 0) particles.push({ x:L*0.06, y:-L/(2*FD.f), vx:(Math.random()-0.5)*14, vy:-26 - Math.random()*20, life:1, r:3, k:'vent' });
+      else particles.push({ x:L*0.2, y:L/(2*FD.f)*1.55 + 18, vx:-30, vy:-14, life:1, r:1.6, k:'in' });
     }
   }
   for (let j = particles.length - 1; j >= 0; j--){
@@ -575,69 +1091,70 @@ function drawScene(dtReal){
     c.beginPath(); c.arc(p.x, p.y, p.r, 0, Math.PI*2); c.fill();
   }
   c.restore();
-
   for (; i < clouds.length; i++) drawCloud(clouds[i]);
   c.globalAlpha = 1;
 
-  // global lighting (day / twilight / night)
   c.globalCompositeOperation = 'multiply';
-  c.fillStyle = rgb(lightColor(d)); c.fillRect(0, 0, W, H);
+  c.fillStyle = rgb(lightColor(d, camZ)); c.fillRect(0, 0, W, H);
   c.globalCompositeOperation = 'source-over';
 
-  // emissive lights
+  // emissive: surface heat glow, then blimp lights
+  if (yG < H + 40){
+    c.strokeStyle = 'rgba(255,120,40,.55)'; c.lineWidth = 2;
+    for (let k = 0; k < 9; k++){ const x0 = ((k*0.137 + 0.05) % 1)*W; c.beginPath(); c.moveTo(x0, yG + 6); c.lineTo(x0 + 30, yG + 18 + (k % 3)*8); c.lineTo(x0 + 70, yG + 14); c.stroke(); }
+    c.fillStyle = '#ffb27a'; c.font = `500 12px ${FONT_MONO}`; c.textAlign = 'right'; c.textBaseline = 'top';
+    c.fillText('Surface · 465°C · 92 bar', W - 16, Math.min(H - 20, yG + 8));
+  }
   c.save(); c.translate(bx, by); c.rotate(-tilt); drawBlimp(c, L, 'glow', d, now); c.restore();
 
-  // target isotherm band
   const tK = F2K(S.targetF);
   const zi = isothermAlt(S, tK);
   if (zi !== null){
-    const y = yOf(zi), dy = (10/9)/LAPSE*pxKm;
-    c.fillStyle = 'rgba(114,210,191,.13)'; c.fillRect(0, y - dy, W, 2*dy);
-    c.strokeStyle = 'rgba(114,210,191,.9)'; c.lineWidth = 1.5; c.setLineDash([8, 6]);
-    c.beginPath(); c.moveTo(56, y); c.lineTo(W, y); c.stroke(); c.setLineDash([]);
-    c.font = `500 12px ${FONT_MONO}`; c.textAlign = 'right'; c.textBaseline = 'bottom';
-    const lbl = `${fmtTarget(S.targetF)} isotherm · ${zi.toFixed(2)} km`;
-    const tw = c.measureText(lbl).width;
-    c.fillStyle = 'rgba(25,18,13,.6)'; c.fillRect(W - tw - 22, y - 22, tw + 12, 18);
-    c.fillStyle = '#a6f0e0'; c.fillText(lbl, W - 16, y - 7);
+    const y = yOf(zi), dy = (25/9)/LAPSE*pxKm;
+    if (y > -dy && y < H + dy){
+      c.fillStyle = 'rgba(114,210,191,.13)'; c.fillRect(0, y - dy, W, 2*dy);
+      c.strokeStyle = 'rgba(114,210,191,.9)'; c.lineWidth = 1.5; c.setLineDash([8, 6]);
+      c.beginPath(); c.moveTo(56, y); c.lineTo(W, y); c.stroke(); c.setLineDash([]);
+      c.font = `500 12px ${FONT_MONO}`; c.textAlign = 'right'; c.textBaseline = 'bottom';
+      const lbl = `${fmtTarget(S.targetF)} isotherm · ${zi.toFixed(2)} km`;
+      const tw = c.measureText(lbl).width;
+      c.fillStyle = 'rgba(25,18,13,.6)'; c.fillRect(W - tw - 22, y - 22, tw + 12, 18);
+      c.fillStyle = '#a6f0e0'; c.fillText(lbl, W - 16, y - 7);
+    }
   }
-  // altitude ladder
   c.fillStyle = 'rgba(25,18,13,.45)'; c.fillRect(0, 0, 52, H);
   c.font = `500 11px ${FONT_MONO}`; c.textAlign = 'left'; c.textBaseline = 'middle';
   const z0 = Math.floor(zOf(H)*10)/10;
   for (let z = z0; z <= zOf(0) + 0.1; z += 0.1){
-    const zz = Math.round(z*10)/10, y = yOf(zz); const major = Math.abs(zz*2 - Math.round(zz*2)) < 1e-6;
+    const zz = Math.round(z*10)/10, y = yOf(zz); if (zz < 0) continue;
+    const major = Math.abs(zz*2 - Math.round(zz*2)) < 1e-6;
     c.strokeStyle = major ? 'rgba(242,231,211,.8)' : 'rgba(242,231,211,.4)';
     c.beginPath(); c.moveTo(major ? 36 : 44, y); c.lineTo(52, y); c.stroke();
     if (major){ c.fillStyle = 'rgba(242,231,211,.85)'; c.fillText(zz.toFixed(1), 4, y); }
   }
   c.fillStyle = 'rgba(242,231,211,.6)'; c.fillText('km', 4, 12);
-  // blimp marker on ladder
   c.fillStyle = C.sulfur; c.beginPath(); c.moveTo(52, by); c.lineTo(60, by - 5); c.lineTo(60, by + 5); c.closePath(); c.fill();
 }
 
-// ---------- profile chart ----------
 function drawProfile(){
-  const c = pctx, W = profCv._w, H = profCv._h; if (!W) return;
+  const c = profCv._ctx, W = profCv._w, H = profCv._h; if (!W) return;
   c.clearRect(0, 0, W, H);
-  const pad = { l:40, r:54, t:10, b:34 };
+  const pad = { l:40, r:42, t:10, b:34 };
   const zmin = 44, zmax = 68, kmin = F2K(-40), kmax = F2K(260);
-  const X = k => pad.l + (k - kmin)/(kmax - kmin)*(W - pad.l - pad.r);
+  const X = k => pad.l + clamp((k - kmin)/(kmax - kmin), -0.02, 1.02)*(W - pad.l - pad.r);
   const Y = z => pad.t + (zmax - z)/(zmax - zmin)*(H - pad.t - pad.b);
-  // cloud layers
-  const layers = [[47.5,50.5,'Lower cloud',.10],[50.5,56.5,'Middle cloud',.075],[56.5,68,'Upper cloud',.04]];
+  const layers = [[47.5,50.5,'Lower cloud',.12],[50.5,56.5,'Middle cloud',.075],[56.5,68,'Upper cloud',.04]];
   c.font = `500 10px ${FONT_MONO}`; c.textBaseline = 'top'; c.textAlign = 'right';
   for (const [z0, z1, name, a] of layers){
     c.fillStyle = `rgba(232,192,90,${a})`; c.fillRect(pad.l, Y(z1), W - pad.l - pad.r, Y(z0) - Y(z1));
     c.fillStyle = C.muted; c.fillText(name.toUpperCase(), W - pad.r - 4, Y(z1) + 4);
   }
-  // grid + axes
   c.strokeStyle = C.line; c.lineWidth = 1; c.textBaseline = 'middle';
   c.font = `400 11px ${FONT_MONO}`;
   for (let z = 44; z <= 68; z += 4){
     const y = Y(z); c.beginPath(); c.moveTo(pad.l, y); c.lineTo(W - pad.r, y); c.stroke();
     c.fillStyle = C.muted; c.textAlign = 'right'; c.fillText(z, pad.l - 6, y);
-    c.textAlign = 'left'; const p = Pbase(z)/1e5; c.fillText(p >= 1 ? p.toFixed(1) + ' bar' : p.toFixed(2) + ' bar', W - pad.r + 6, y);
+    c.textAlign = 'left'; const p = Pbase(z)/1e5; c.fillText(p >= 1 ? p.toFixed(1) : p.toFixed(2), W - pad.r + 6, y);
   }
   const ticks = unit === 'F' ? [0, 50, 100, 150, 200, 250] : [-25, 0, 25, 50, 75, 100, 125];
   c.textAlign = 'center'; c.textBaseline = 'top';
@@ -647,12 +1164,10 @@ function drawProfile(){
     c.fillStyle = C.muted; c.fillText(t + '°', x, H - pad.b + 5);
   }
   c.textAlign = 'left'; c.fillText(`outside air (${unit === 'F' ? '°F' : '°C'}) →`, pad.l, H - 14);
-  c.save(); c.translate(11, pad.t + 2); c.textAlign = 'left'; c.textBaseline = 'top'; c.fillText('km', 0, 0); c.restore();
-  // target band
-  const tK = F2K(S.targetF), bw = 10/9;
+  c.fillText('km', 11, pad.t + 2); c.fillText('bar', W - pad.r + 6, H - 14);
+  const tK = F2K(S.targetF), bw = 25/9;
   c.fillStyle = 'rgba(114,210,191,.14)'; c.fillRect(X(tK - bw), pad.t, X(tK + bw) - X(tK - bw), H - pad.t - pad.b);
   c.strokeStyle = C.band; c.setLineDash([5, 4]); c.beginPath(); c.moveTo(X(tK), pad.t); c.lineTo(X(tK), H - pad.b); c.stroke(); c.setLineDash([]);
-  // profiles
   c.save(); c.beginPath(); c.rect(pad.l, pad.t, W - pad.l - pad.r, H - pad.t - pad.b); c.clip();
   c.strokeStyle = 'rgba(178,157,130,.55)'; c.lineWidth = 1.2; c.beginPath();
   for (let z = zmin; z <= zmax + 1e-6; z += 0.1){ const x = X(Tbase(z)), y = Y(z); z === zmin ? c.moveTo(x, y) : c.lineTo(x, y); }
@@ -661,19 +1176,18 @@ function drawProfile(){
   for (let z = zmin; z <= zmax + 1e-6; z += 0.1){ const x = X(ambient(S, z)), y = Y(z); z === zmin ? c.moveTo(x, y) : c.lineTo(x, y); }
   c.stroke();
   c.restore();
-  // blimp marker
-  const bx = X(S.T), by = Y(S.z/1000);
-  c.fillStyle = C.panel; c.strokeStyle = C.fg; c.lineWidth = 2;
+  const zb = S.z/1000, below = zb < zmin;
+  const bx = X(S.T), by = Y(clamp(zb, zmin, zmax));
+  c.fillStyle = C.panel; c.strokeStyle = below ? C.warn : C.fg; c.lineWidth = 2;
   c.beginPath(); c.arc(bx, by, 6, 0, Math.PI*2); c.fill(); c.stroke();
-  c.fillStyle = C.fg; c.font = `600 12px ${FONT_DISP}`; c.textAlign = 'left'; c.textBaseline = 'middle';
-  c.fillText('VA-01', bx + 10, by);
+  c.fillStyle = below ? C.warn : C.fg; c.font = `600 12px ${FONT_DISP}`; c.textAlign = 'left'; c.textBaseline = 'middle';
+  c.fillText(below ? `VA-01 ↓ ${zb.toFixed(1)} km` : 'VA-01', Math.min(bx + 10, W - 110), by - (below ? 10 : 0));
   const zi = isothermAlt(S, tK);
   $('isoLbl').textContent = zi === null ? 'target out of range' : `${fmtTarget(S.targetF)} at ${zi.toFixed(2)} km`;
 }
 
-// ---------- history chart ----------
 function drawHistory(){
-  const c = hctx, W = histCv._w, H = histCv._h; if (!W) return;
+  const c = histCv._ctx, W = histCv._w, H = histCv._h; if (!W) return;
   c.clearRect(0, 0, W, H);
   const win = clamp(speed*150, 900, 7*86400);
   const nWin = Math.min(hCount, Math.floor(win/HIST_DT));
@@ -683,99 +1197,85 @@ function drawHistory(){
     { y0:pad.t, get:i => tU(hT[i]), label:'Outside air', unitLbl:unit === 'F' ? '°F' : '°C', col:C.sulfur, band:true },
     { y0:pad.t + ph + gap, get:i => hZ[i]/1000, label:'Altitude', unitLbl:'km', col:C.fg, band:false },
   ];
-  const step = Math.max(1, Math.floor(nWin/Math.max(60, W - pad.l - pad.r)));
-  const idx = k => (hHead - nWin + k + HIST_N) % HIST_N; // k=0 oldest
+  const stp = Math.max(1, Math.floor(nWin/Math.max(60, W - pad.l - pad.r)));
+  const idx = k => (hHead - nWin + k + HIST_N) % HIST_N;
   const X = k => pad.l + (k/Math.max(1, nWin - 1))*(W - pad.l - pad.r);
   for (const P of panels){
     let lo = Infinity, hi = -Infinity;
-    for (let k = 0; k < nWin; k += step){ const v = P.get(idx(k)); if (v < lo) lo = v; if (v > hi) hi = v; }
-    if (P.band){ const t = tU(F2K(S.targetF)), bw = unit === 'F' ? 2 : 10/9; lo = Math.min(lo, t - bw*2.5); hi = Math.max(hi, t + bw*2.5); }
+    for (let k = 0; k < nWin; k += stp){ const v = P.get(idx(k)); if (v < lo) lo = v; if (v > hi) hi = v; }
+    if (P.band){ const t = tU(F2K(S.targetF)), bw = unit === 'F' ? 5 : 25/9; lo = Math.min(lo, t - bw*2.5); hi = Math.max(hi, t + bw*2.5); }
     if (!isFinite(lo)){ lo = 0; hi = 1; }
     if (hi - lo < (P.band ? 1 : 0.1)){ const m = (hi + lo)/2, h = P.band ? 0.5 : 0.05; lo = m - h; hi = m + h; }
     const padv = (hi - lo)*0.08; lo -= padv; hi += padv;
     const Y = v => P.y0 + (hi - v)/(hi - lo)*ph;
     c.fillStyle = C.fg; c.font = `600 13px ${FONT_DISP}`; c.textAlign = 'left'; c.textBaseline = 'bottom';
     c.fillText(`${P.label} (${P.unitLbl})`, pad.l, P.y0 - 5);
-    // grid
     c.font = `400 11px ${FONT_MONO}`; c.textAlign = 'right'; c.textBaseline = 'middle';
-    const nt = 3;
-    for (let j = 0; j <= nt; j++){
-      const v = lo + (hi - lo)*j/nt, y = Y(v);
+    for (let j = 0; j <= 3; j++){
+      const v = lo + (hi - lo)*j/3, y = Y(v);
       c.strokeStyle = C.line; c.beginPath(); c.moveTo(pad.l, y); c.lineTo(W - pad.r, y); c.stroke();
-      c.fillStyle = C.muted; c.fillText(v.toFixed(P.band ? 1 : 2), pad.l - 6, y);
+      c.fillStyle = C.muted; c.fillText(v.toFixed(P.band ? 1 : (hi - lo > 5 ? 0 : 2)), pad.l - 6, y);
     }
     if (P.band){
-      const t = tU(F2K(S.targetF)), bw = unit === 'F' ? 2 : 10/9;
+      const t = tU(F2K(S.targetF)), bw = unit === 'F' ? 5 : 25/9;
       c.fillStyle = 'rgba(114,210,191,.14)'; c.fillRect(pad.l, Y(t + bw), W - pad.l - pad.r, Y(t - bw) - Y(t + bw));
       c.strokeStyle = C.band; c.setLineDash([5, 4]); c.beginPath(); c.moveTo(pad.l, Y(t)); c.lineTo(W - pad.r, Y(t)); c.stroke(); c.setLineDash([]);
     }
     if (nWin > 1){
       c.save(); c.beginPath(); c.rect(pad.l, P.y0, W - pad.l - pad.r, ph); c.clip();
       c.beginPath();
-      for (let k = 0; k < nWin; k += step){ const x = X(k), y = Y(P.get(idx(k))); k === 0 ? c.moveTo(x, y) : c.lineTo(x, y); }
+      for (let k = 0; k < nWin; k += stp){ const x = X(k), y = Y(P.get(idx(k))); k === 0 ? c.moveTo(x, y) : c.lineTo(x, y); }
       const lastK = nWin - 1; c.lineTo(X(lastK), Y(P.get(idx(lastK))));
       c.strokeStyle = P.col; c.lineWidth = 1.6; c.stroke();
       c.lineTo(X(lastK), P.y0 + ph); c.lineTo(X(0), P.y0 + ph); c.closePath();
       c.fillStyle = P.band ? 'rgba(232,192,90,.08)' : 'rgba(242,231,211,.06)'; c.fill();
       c.restore();
-      const ex = X(lastK), ey = Y(P.get(idx(lastK)));
-      c.fillStyle = P.col; c.beginPath(); c.arc(ex, ey, 3.5, 0, Math.PI*2); c.fill();
+      c.fillStyle = P.col; c.beginPath(); c.arc(X(lastK), Y(P.get(idx(lastK))), 3.5, 0, Math.PI*2); c.fill();
     }
   }
   c.fillStyle = C.muted; c.font = `400 11px ${FONT_MONO}`; c.textBaseline = 'top';
   c.textAlign = 'left'; c.fillText(`−${fmtDur(nWin*HIST_DT || win)}`, pad.l, H - pad.b + 8);
   c.textAlign = 'right'; c.fillText('now', W - pad.r, H - pad.b + 8);
   const pct = S.total > 0 ? 100*S.inBand/S.total : 0;
-  $('bandStat').textContent = `within ±2°F: ${pct.toFixed(1)}% of ${fmtDur(S.total)}`;
-  $('histCap').textContent = `Shaded band is ±${unit === 'F' ? '2°F' : '1.1°C'} around the target. Window scales with time speed.`;
+  $('bandStat').textContent = `within ±5°F: ${pct.toFixed(1)}% of ${fmtDur(S.total)}`;
+  $('histCap').textContent = `Shaded band is ±${unit === 'F' ? '5°F' : '2.8°C'} around the target. The slow compressor trims for drifts, not every wave.`;
 }
 
-// ---------- globe ----------
 function drawGlobe(){
-  const c = gctx, W = globeCv._w, H = globeCv._h; if (!W) return;
+  const c = globeCv._ctx, W = globeCv._w, H = globeCv._h; if (!W) return;
   c.clearRect(0, 0, W, H);
   const cx = W/2, cy = H/2, r = Math.min(W, H)*0.34;
   const g = c.createLinearGradient(cx - r, 0, cx + r, 0);
   g.addColorStop(0, '#2a1e15'); g.addColorStop(.46, '#3a2a1b'); g.addColorStop(.54, '#b98a48'); g.addColorStop(1, '#f0d69c');
   c.fillStyle = g; c.beginPath(); c.arc(cx, cy, r, 0, Math.PI*2); c.fill();
-  // faint cloud swirls
   c.save(); c.beginPath(); c.arc(cx, cy, r, 0, Math.PI*2); c.clip();
   c.strokeStyle = 'rgba(255,240,210,.12)'; c.lineWidth = 2;
   for (let k = 1; k <= 4; k++){ c.beginPath(); c.arc(cx, cy, r*k/4.6, k, k + 3.6); c.stroke(); }
   c.restore();
-  // track ring
   const rr = r*1.16;
   c.strokeStyle = C.line; c.setLineDash([3, 5]); c.beginPath(); c.arc(cx, cy, rr, 0, Math.PI*2); c.stroke(); c.setLineDash([]);
-  // labels
   c.fillStyle = C.muted; c.font = `400 10px ${FONT_MONO}`; c.textBaseline = 'middle';
   c.textAlign = 'left'; c.fillText('noon', cx + rr + 6, cy);
   c.textAlign = 'right'; c.fillText('midnight', cx - rr - 6, cy);
   c.textAlign = 'center'; c.fillText('sunrise', cx, cy - rr - 10); c.fillText('sunset', cx, cy + rr + 10);
   c.fillStyle = C.sulfur; c.textAlign = 'right'; c.fillText('Sun →', W - 4, 10);
-  // trail + blimp
   const th = hourAngle(S.lt);
   c.strokeStyle = 'rgba(114,210,191,.45)'; c.lineWidth = 3; c.lineCap = 'round';
-  if (trail.length > 1){
-    c.beginPath(); trail.forEach((a, i) => { const x = cx + rr*Math.cos(a), y = cy + rr*Math.sin(a); i ? c.lineTo(x, y) : c.moveTo(x, y); }); c.stroke();
-  }
+  if (trail.length > 1){ c.beginPath(); trail.forEach((a, i) => { const x = cx + rr*Math.cos(a), y = cy + rr*Math.sin(a); i ? c.lineTo(x, y) : c.moveTo(x, y); }); c.stroke(); }
   const bx = cx + rr*Math.cos(th), by = cy + rr*Math.sin(th);
-  c.fillStyle = C.band; c.beginPath(); c.arc(bx, by, 6, 0, Math.PI*2); c.fill();
+  c.fillStyle = S.lost ? C.warn : C.band; c.beginPath(); c.arc(bx, by, 6, 0, Math.PI*2); c.fill();
   c.strokeStyle = C.panel; c.lineWidth = 2; c.stroke();
-  // direction arrow (clockwise from above the north pole)
   const a2 = th + 0.28; c.fillStyle = C.band;
   c.save(); c.translate(cx + rr*Math.cos(a2), cy + rr*Math.sin(a2)); c.rotate(a2 + Math.PI/2);
   c.beginPath(); c.moveTo(5, 0); c.lineTo(-3, -4); c.lineTo(-3, 4); c.closePath(); c.fill(); c.restore();
-
   const circ = 2*Math.PI*(R_V + S.z);
   $('gLaps').textContent = S.laps.toFixed(2);
-  $('gLap').textContent = `${(circ/S.u/86400).toFixed(1)} days`;
+  $('gLap').textContent = `${(circ/Math.max(1, S.u)/86400).toFixed(1)} days`;
   const solarPeriod = circ/(S.u + SOLAR_DRIFT);
-  let dh = (6 - S.lt + 24) % 24;
-  $('gSun').textContent = fmtDur(dh/24*solarPeriod);
+  $('gSun').textContent = fmtDur(((6 - S.lt + 24) % 24)/24*solarPeriod);
 }
-function drawAllPanels(){ drawProfile(); drawHistory(); drawGlobe(); }
+function drawFlightPanels(){ drawProfile(); drawHistory(); drawGlobe(); }
 
-// ---------- HUD / telemetry ----------
 function updateHud(){
   const tK = F2K(S.targetF), dTv = tU(S.T) - tU(tK);
   $('hudTemp').textContent = fmtT(S.T, 1);
@@ -783,95 +1283,399 @@ function updateHud(){
   const d = daylight(S.lt);
   $('hudTime').textContent = fmtHM(S.lt);
   $('hudDay').textContent = `${d > 0.6 ? 'daylight' : d > 0.15 ? 'twilight' : 'night'} · ${(S.t/86400).toFixed(2)} Earth days aloft`;
-  const zi = isothermAlt(S, tK);
-  $('tAlt').textContent = `${(S.z/1000).toFixed(2)} km`;
-  $('tAltSub').textContent = zi === null ? 'target isotherm out of range' : `isotherm at ${zi.toFixed(2)} km (${((S.z/1000 - zi)*1000).toFixed(0)} m)`;
+  const zkm = S.z/1000, zi = isothermAlt(S, tK);
+  $('tAlt').textContent = `${zkm.toFixed(2)} km`;
+  $('tAltSub').textContent = zi === null ? 'target isotherm out of range' : `isotherm at ${zi.toFixed(2)} km (${((zkm - zi)*1000).toFixed(0)} m)`;
   const bar = S.P/1e5;
-  $('tP').textContent = `${bar.toFixed(3)} bar`;
-  $('tPSub').textContent = `like ${(-8.4*Math.log(bar/1.01325)).toFixed(1)} km up on Earth`;
-  $('tRho').textContent = `${S.rho.toFixed(3)} kg/m³`;
+  $('tP').textContent = bar >= 10 ? `${bar.toFixed(1)} bar` : `${bar.toFixed(3)} bar`;
+  $('tPSub').textContent = bar < 1.01325 ? `${S.rho.toFixed(2)} kg/m³ · like ${(-8.4*Math.log(bar/1.01325)).toFixed(1)} km up on Earth` : `${S.rho.toFixed(1)} kg/m³ · ${(bar/1.01325).toFixed(1)}× Earth sea level`;
   $('tWind').textContent = `${S.u.toFixed(0)} m/s`;
   $('tWindSub').textContent = `westward · ${(S.u*3.6).toFixed(0)} km/h`;
   $('tVz').textContent = `${S.v >= 0 ? '+' : '−'}${Math.abs(S.v).toFixed(2)} m/s`;
   $('tVzSub').textContent = `air moving ${S.w >= 0 ? 'up' : 'down'} ${Math.abs(S.w).toFixed(2)} m/s`;
+  const aer = aerosol(zkm);
+  $('tAcid').textContent = aer > 0.05 ? `${aer.toFixed(1)} mg/m³` : 'clear';
+  $('tAcidSub').textContent = aer > 0.05 ? `${acidWt(zkm).toFixed(0)}% H₂SO₄ droplets` : zkm < 47.5 ? 'too hot for droplets · acid vapor' : 'above the haze';
+  $('tHe').textContent = `${(S.nHe*M_HE_MOL).toFixed(1)} kg`;
+  $('tHeSub').textContent = S.burst ? 'envelope burst · escaping' : S.sp >= 0 ? `superpressure +${(S.sp*100).toFixed(1)}%` : `slack · ${(-S.sp*100).toFixed(0)}% under-filled`;
+  const env = S.env;
+  $('tEnv').textContent = FD.lam.outer ? `${FD.lam.outer.name} ${env.tOut.toFixed(env.tOut < 1 ? 2 : 1)} µm` : 'no outer film';
+  $('tEnvSub').textContent = `fabric ${(fabFactor(FD, env)*100).toFixed(1)}% · ${isFinite(S.sf) ? `safety factor ${S.sf.toFixed(1)}` : 'no pressure load'}`;
+  const bMax = 2*FD.trimKg;
   $('tB').textContent = `${Math.round(S.b).toLocaleString()} kg`;
-  $('tBBar').style.width = `${(S.b/B_MAX*100).toFixed(1)}%`;
-  $('tBSub').textContent = S.bdot > 0.05 ? `pumping in ${S.bdot.toFixed(1)} kg/s` : S.bdot < -0.05 ? `venting ${(-S.bdot).toFixed(1)} kg/s` : `holding · net lift ${S.lift >= 0 ? '+' : '−'}${Math.abs(S.lift).toFixed(0)} kg`;
+  $('tBBar').style.width = `${(S.b/bMax*100).toFixed(1)}%`;
+  $('tBSub').textContent = S.bdot > 1e-4 ? `compressing ${(S.bdot*3600).toFixed(0)} kg/h · ${COMPRESSOR_KW} kW` : S.bdot < -1e-4 ? `venting ${(-S.bdot).toFixed(2)} kg/s` : `holding · net lift ${S.lift >= 0 ? '+' : '−'}${Math.abs(S.lift).toFixed(0)} kg`;
 
   const pill = $('statusPill');
   let cls = 'move', txt;
-  if (S.sat === 'light'){ cls = 'warn'; txt = 'Ballast empty · can’t climb higher'; }
+  if (S.lost){ cls = 'warn'; txt = 'Lost at the surface'; }
+  else if (S.burst){ cls = 'warn'; txt = 'Envelope burst · falling'; }
+  else if (S.sp < 0 && S.v < -0.3){ cls = 'warn'; txt = 'Lost pressure · sinking'; }
+  else if (S.sat === 'light'){ cls = 'warn'; txt = 'Ballast empty · can’t climb higher'; }
   else if (S.sat === 'heavy'){ cls = 'warn'; txt = 'Ballast tank full · can’t go lower'; }
-  else if (Math.abs(S.T - tK) < 10/9){ cls = 'band'; txt = `Holding the ${fmtTarget(S.targetF)} band`; }
+  else if (Math.abs(S.T - tK) < 25/9){ cls = 'band'; txt = `Holding the ${fmtTarget(S.targetF)} band`; }
   else if (!S.auto){ cls = 'warn'; txt = S.v > 0.05 ? 'Manual · climbing' : S.v < -0.05 ? 'Manual · descending' : 'Manual · drifting'; }
-  else txt = S.T > tK ? 'Too warm · climbing' : 'Too cool · descending';
-  if (S.event) txt += ' · downdraft';
+  else txt = S.T > tK ? 'Too warm · trimming up' : 'Too cool · trimming down';
+  if (S.event && !S.lost) txt += ' · downdraft';
   pill.className = `pill ${cls}`; pill.innerHTML = `<span class="dot"></span>${txt}`;
+  if (S.lost && $('lostBox').hidden){
+    $('lostBox').hidden = false;
+    const notes = S.env.notes.length ? ` ${S.env.notes.slice(0, 3).join('; ')}.` : '';
+    $('lostText').textContent = `Sank to the surface after ${fmtDur(S.t)} aloft. The air down there is 465°C at 92 bar.${notes}`;
+  }
 }
 
-// ---------- controls ----------
+// flight controls
 const speedBtns = [...document.querySelectorAll('#speedSeg button')];
 function setSpeed(v){ speed = v; speedBtns.forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.speed === v))); drawHistory(); }
 speedBtns.forEach(b => b.addEventListener('click', () => setSpeed(+b.dataset.speed)));
 $('playBtn').addEventListener('click', () => { running = !running; $('playBtn').textContent = running ? 'Pause' : 'Resume'; });
 const target = $('target');
-function syncTarget(){ $('targetOut').textContent = fmtTarget(S.targetF); target.value = S.targetF; target.setAttribute('aria-valuetext', fmtTarget(S.targetF)); drawAllPanels(); }
+function syncTarget(){ $('targetOut').textContent = fmtTarget(S.targetF); target.value = S.targetF; target.setAttribute('aria-valuetext', fmtTarget(S.targetF)); drawFlightPanels(); }
 target.addEventListener('input', () => { S.targetF = +target.value; syncTarget(); });
 $('reset70').addEventListener('click', () => { S.targetF = 70; syncTarget(); });
 const autoBox = $('auto'), pumpBtn = $('pumpBtn'), ventBtn = $('ventBtn');
 function syncAuto(){ S.auto = autoBox.checked; pumpBtn.disabled = ventBtn.disabled = S.auto; if (S.auto) S.manual = 0; }
 autoBox.addEventListener('change', syncAuto);
-function holdify(btn, dir){
-  const on = e => { if (btn.disabled) return; e.preventDefault(); S.manual = dir; btn.classList.add('active'); };
-  const off = () => { if (S.manual === dir) S.manual = 0; btn.classList.remove('active'); };
-  btn.addEventListener('pointerdown', on);
-  ['pointerup', 'pointerleave', 'pointercancel', 'blur'].forEach(ev => btn.addEventListener(ev, off));
-  btn.addEventListener('keydown', e => { if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) on(e); });
-  btn.addEventListener('keyup', e => { if (e.key === ' ' || e.key === 'Enter') off(); });
+function holdify(btn, on, off){
+  const down = e => { if (btn.disabled) return; e.preventDefault(); on(); btn.classList.add('active'); };
+  const up = () => { off(); btn.classList.remove('active'); };
+  btn.addEventListener('pointerdown', down);
+  ['pointerup', 'pointerleave', 'pointercancel', 'blur'].forEach(ev => btn.addEventListener(ev, up));
+  btn.addEventListener('keydown', e => { if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) down(e); });
+  btn.addEventListener('keyup', e => { if (e.key === ' ' || e.key === 'Enter') up(); });
 }
-holdify(pumpBtn, 1); holdify(ventBtn, -1);
+holdify(pumpBtn, () => { S.manual = 1; }, () => { if (S.manual === 1) S.manual = 0; });
+holdify(ventBtn, () => { S.manual = -1; }, () => { if (S.manual === -1) S.manual = 0; });
+holdify($('leakBtn'), () => { S.heVent = 1; }, () => { S.heVent = 0; });
 $('weather').addEventListener('change', e => { S.weather = e.target.checked; drawProfile(); });
 $('gustBtn').addEventListener('click', () => { S.event = { t0:S.t, dur:240, amp:-3.5 }; });
 const unitBtns = [...document.querySelectorAll('#unitSeg button')];
 unitBtns.forEach(b => b.addEventListener('click', () => {
   unit = b.dataset.unit; unitBtns.forEach(x => x.setAttribute('aria-pressed', String(x === b)));
-  $('reset70').textContent = fmtTarget(70); syncTarget(); updateHud();
+  $('reset70').textContent = fmtTarget(70); syncTarget(); updateHud(); syncMission(false);
 }));
+$('relaunch').addEventListener('click', () => { launch(true); syncAuto(); syncTarget(); updateHud(); });
 
-// ---------- loop ----------
-let last = performance.now(), frame = 0;
-function tick(now){
-  const dtReal = Math.min(0.1, (now - last)/1000); last = now;
-  if (running){
+function flightTick(dtReal){
+  if (running && !S.lost){
     let simDt = dtReal*speed;
-    const h = 0.5;
-    while (simDt > 1e-9){
-      const d = Math.min(h, simDt); step(S, d); simDt -= d;
+    const h = speed >= 14400 ? 2 : 0.5;
+    while (simDt > 1e-9 && !S.lost){
+      const d = Math.min(h, simDt); step(S, FD, d); simDt -= d;
       if (S.t >= hNext){ pushHist(); hNext = S.t + HIST_DT; }
     }
     const th = hourAngle(S.lt);
     if (!trail.length || Math.abs(th - trail[trail.length-1]) > 0.01){ trail.push(th); if (trail.length > 160) trail.shift(); }
   }
   drawScene(running ? dtReal : 0);
-  if (frame % 4 === 0) updateHud();
-  if (frame % 8 === 0) drawAllPanels();
+}
+
+// ================= DESIGN LAB =================
+const mission = { ...DEFAULT_MISSION };
+let cem = newCEM(48), labRunning = true, labStarted = false;
+const mCtl = [
+  ['mTarget', 'targetF', v => fmtTarget(v)],
+  ['mPayload', 'payload', v => `${v.toLocaleString()} kg`],
+  ['mSpeed', 'airspeed', v => `${v} m/s`],
+  ['mGoal', 'goal', v => `${v} d`],
+  ['mBeta', 'beta', v => v.toFixed(2)],
+  ['mSF', 'minSF', v => v.toFixed(1)],
+];
+function syncMission(reset){
+  mCtl.forEach(([id, k, f]) => { $(id + 'Out').textContent = f(mission[k]); });
+  if (reset){ cem = newCEM(+$('mPop').value); startGen(cem); renderLab(); }
+}
+mCtl.forEach(([id, k]) => $(id).addEventListener('input', e => { mission[k] = +e.target.value; syncMission(true); }));
+$('mPop').addEventListener('change', () => syncMission(true));
+$('mCaution').addEventListener('change', e => { mission.caution = e.target.checked; syncMission(true); });
+$('labRun').addEventListener('click', () => { if (cem.done){ syncMission(true); labRunning = true; } else labRunning = !labRunning; syncLabBtn(); });
+$('labStep').addEventListener('click', () => { labRunning = false; syncLabBtn(); while (!evalSome(cem, mission, 1000)); renderLab(); });
+$('labReset').addEventListener('click', () => { syncMission(true); labRunning = true; syncLabBtn(); });
+function syncLabBtn(){ $('labRun').textContent = cem.done ? 'Run again' : labRunning ? 'Pause' : 'Run'; }
+$('flyBest').addEventListener('click', () => {
+  if (!cem.best) return;
+  flightG = { ...cem.best.g };
+  FD = designFrom(flightG, mission);
+  launch(false);
+  S.targetF = mission.targetF <= 105 ? mission.targetF : 105;
+  syncAuto(); syncTarget();
+  location.hash = 'flight';
+});
+
+// "What it has learned" scaffold
+(function buildLearned(){
+  const root = $('learned');
+  CATS.forEach(([k, opts, title], i) => {
+    const grp = document.createElement('div'); grp.className = 'group';
+    grp.innerHTML = `<h3>${title}</h3>` + opts.map((o, j) => `<div class="prob" id="pb-${i}-${j}"><span>${optName(k, o)}</span><span class="pbar"><i></i></span><output>–</output></div>`).join('');
+    root.appendChild(grp);
+  });
+  const grp = document.createElement('div'); grp.className = 'group';
+  grp.innerHTML = `<h3>Dimensions</h3>` + CONTS.map((cc, i) => `<div class="track" id="tk-${i}"><span>${cc.label}</span><span class="tr"><i></i><b></b></span><output>–</output></div>`).join('');
+  root.appendChild(grp);
+})();
+function renderLearned(){
+  CATS.forEach(([k, opts], i) => {
+    const p = cem.probs[i], lead = p.indexOf(Math.max(...p));
+    opts.forEach((o, j) => {
+      const el = $(`pb-${i}-${j}`);
+      el.classList.toggle('lead', j === lead);
+      el.querySelector('i').style.width = `${(p[j]*100).toFixed(1)}%`;
+      el.querySelector('output').textContent = `${Math.round(p[j]*100)}%`;
+    });
+  });
+  CONTS.forEach((cc, i) => {
+    const el = $(`tk-${i}`), lo = clamp(cem.mu[i] - cem.sd[i], 0, 1), hi = clamp(cem.mu[i] + cem.sd[i], 0, 1);
+    const bar = el.querySelector('i'); bar.style.left = `${lo*100}%`; bar.style.width = `${Math.max(1, (hi - lo)*100)}%`;
+    const best = cem.best ? cem.best.g[cc.k] : denorm(cc, cem.mu[i]);
+    el.querySelector('b').style.left = `${clamp(norm(cc, best), 0, 1)*100}%`;
+    el.querySelector('output').textContent = cc.fmt(best);
+  });
+}
+function drawLearning(){
+  const c = $('learnCv')._ctx, cv = $('learnCv'), W = cv._w, H = cv._h; if (!W) return;
+  c.clearRect(0, 0, W, H);
+  const pad = { l:40, r:12, t:12, b:28 }, hs = cem.hist;
+  const n = Math.max(10, hs.length);
+  const hi = Math.max(10, ...hs.map(h => h.best))*1.1;
+  const X = gI => pad.l + (gI/(n))*(W - pad.l - pad.r), Y = v => pad.t + (1 - v/hi)*(H - pad.t - pad.b);
+  c.font = `400 11px ${FONT_MONO}`; c.textAlign = 'right'; c.textBaseline = 'middle';
+  for (let j = 0; j <= 4; j++){ const v = hi*j/4, y = Y(v); c.strokeStyle = C.line; c.beginPath(); c.moveTo(pad.l, y); c.lineTo(W - pad.r, y); c.stroke(); c.fillStyle = C.muted; c.fillText(v.toFixed(0), pad.l - 6, y); }
+  c.textAlign = 'center'; c.textBaseline = 'top';
+  const stepT = Math.max(1, Math.ceil(n/8/5)*5);
+  for (let gI = 0; gI <= n; gI += stepT) c.fillText(gI, X(gI), H - pad.b + 6);
+  c.textAlign = 'right'; c.fillText('generation', W - pad.r, H - 13);
+  const line = (key, col, w) => {
+    if (!hs.length) return;
+    c.beginPath(); hs.forEach((h, i) => { const x = X(h.gen), y = Y(h[key]); i ? c.lineTo(x, y) : c.moveTo(x, y); });
+    c.strokeStyle = col; c.lineWidth = w; c.stroke();
+  };
+  if (hs.length){
+    c.beginPath(); hs.forEach((h, i) => { const x = X(h.gen), y = Y(h.best); i ? c.lineTo(x, y) : c.moveTo(x, y); });
+    c.lineTo(X(hs[hs.length-1].gen), Y(0)); c.lineTo(X(hs[0].gen), Y(0)); c.closePath();
+    c.fillStyle = 'rgba(232,192,90,.08)'; c.fill();
+  }
+  line('pop', C.muted, 1.2); line('elite', C.band, 1.6); line('best', C.sulfur, 2.2);
+  if (hs.length){ const h = hs[hs.length-1]; c.fillStyle = C.sulfur; c.beginPath(); c.arc(X(h.gen), Y(h.best), 3.5, 0, Math.PI*2); c.fill(); }
+  else { c.fillStyle = C.muted; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('first generation running…', W/2, H/2); }
+}
+function drawScatter(){
+  const cv = $('scatterCv'), c = cv._ctx, W = cv._w, H = cv._h; if (!W) return;
+  c.clearRect(0, 0, W, H);
+  const pad = { l:44, r:12, t:12, b:30 };
+  const ms = cem.lastPop.filter(r => r.d && isFinite(r.mTot)).map(r => r.mTot);
+  let mLo = ms.length ? Math.min(...ms) : 1000, mHi = ms.length ? Math.max(...ms) : 10000;
+  if (mHi/mLo < 2){ const c0 = Math.sqrt(mHi*mLo); mLo = c0/1.45; mHi = c0*1.45; }
+  const lo = Math.log10(mLo/1.08), hi = Math.log10(mHi*1.08);
+  const X = m => pad.l + clamp((Math.log10(m) - lo)/(hi - lo), 0, 1)*(W - pad.l - pad.r);
+  const Y = d => pad.t + (1 - clamp(d/mission.goal, 0, 1))*(H - pad.t - pad.b);
+  c.font = `400 11px ${FONT_MONO}`; c.textAlign = 'right'; c.textBaseline = 'middle';
+  for (let j = 0; j <= 4; j++){ const d = mission.goal*j/4, y = Y(d); c.strokeStyle = C.line; c.beginPath(); c.moveTo(pad.l, y); c.lineTo(W - pad.r, y); c.stroke(); c.fillStyle = C.muted; c.fillText(Math.round(d), pad.l - 6, y); }
+  c.textAlign = 'center'; c.textBaseline = 'top';
+  const nice = [500,700,1000,1500,2000,2500,3000,4000,5000,7000,10000,15000,20000,30000,50000,70000,100000];
+  let tks = nice.filter(m => Math.log10(m) > lo && Math.log10(m) < hi);
+  while (tks.length > 5) tks = tks.filter((_, i) => i % 2 === 0);
+  for (const m of tks){ const x = X(m); c.strokeStyle = C.line; c.beginPath(); c.moveTo(x, pad.t); c.lineTo(x, H - pad.b); c.stroke(); c.fillStyle = C.muted; c.fillText(fmtKg(m), x, H - pad.b + 5); }
+  c.textAlign = 'left'; c.fillText('days in band ↑', pad.l + 4, pad.t);
+  c.textAlign = 'right'; c.fillText('mass at Venus →', W - pad.r, H - 13);
+  const fluor = new Set(['PTFE','FEP','PFA','ETFE','PCTFE']);
+  for (const r of cem.lastPop){
+    if (!r.d) continue;
+    c.fillStyle = r.g.outer === 'none' ? C.warn : fluor.has(r.g.outer) ? C.band : C.sulfur;
+    c.globalAlpha = 0.75; c.beginPath(); c.arc(X(r.mTot), Y(r.useful), 3.5, 0, Math.PI*2); c.fill();
+  }
+  c.globalAlpha = 1;
+  if (cem.best && cem.best.d){ c.strokeStyle = C.fg; c.lineWidth = 2; c.beginPath(); c.arc(X(cem.best.mTot), Y(cem.best.useful), 7, 0, Math.PI*2); c.stroke(); }
+}
+function drawShape(){
+  const cv = $('shapeCv'), c = cv._ctx, W = cv._w, H = cv._h; if (!W) return;
+  c.clearRect(0, 0, W, H);
+  const r = cem.best; if (!r || !r.d){ c.fillStyle = C.muted; c.font = `400 12px ${FONT_MONO}`; c.textAlign = 'center'; c.fillText('waiting for the first generation', W/2, H/2); return; }
+  const d = r.d, scale = Math.min((W*0.62)/d.L, (H*0.62)/d.D);
+  const a = d.L/2*scale, b = d.D/2*scale, cx = W*0.42, cy = H*0.44;
+  const cols = d.lam.coat ? ['#f8f9fb','#c8ccd2','#7a8089'] : d.lam.fab.cols;
+  const gr = c.createLinearGradient(0, cy - b, 0, cy + b); gr.addColorStop(0, cols[0]); gr.addColorStop(.45, cols[1]); gr.addColorStop(1, cols[2]);
+  if (d.f > 1.6){ c.fillStyle = '#8c8475'; c.beginPath(); c.moveTo(cx - a*0.55, cy - b*0.72); c.lineTo(cx - a*0.94, cy - b*1.5); c.lineTo(cx - a*1.03, cy - b*1.45); c.lineTo(cx - a*0.99, cy - b*0.22); c.closePath(); c.fill(); }
+  c.fillStyle = gr; c.beginPath(); c.ellipse(cx, cy, a, b, 0, 0, Math.PI*2); c.fill();
+  c.fillStyle = '#bdb3a0'; roundRect(c, cx - Math.min(a*0.3, 40), cy + b*1.02, Math.min(a*0.6, 80), Math.max(6, b*0.22), 4); c.fill();
+  c.strokeStyle = C.muted; c.fillStyle = C.muted; c.lineWidth = 1; c.font = `400 11px ${FONT_MONO}`;
+  c.beginPath(); c.moveTo(cx - a, cy - b - 12); c.lineTo(cx + a, cy - b - 12); c.stroke();
+  c.textAlign = 'center'; c.textBaseline = 'bottom'; c.fillText(`${d.L.toFixed(1)} m`, cx, cy - b - 15);
+  c.beginPath(); c.moveTo(cx + a + 12, cy - b); c.lineTo(cx + a + 12, cy + b); c.stroke();
+  c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillText(`${d.D.toFixed(1)} m`, cx + a + 18, cy);
+  const sb = 10*scale, sx = 14, sy = H - 14;
+  c.strokeStyle = C.fg; c.lineWidth = 2; c.beginPath(); c.moveTo(sx, sy); c.lineTo(sx + sb, sy); c.stroke();
+  c.fillStyle = C.fg; c.textAlign = 'left'; c.textBaseline = 'bottom'; c.fillText('10 m', sx, sy - 4);
+  const hu = 1.8*scale; c.fillStyle = C.band; c.fillRect(sx + sb + 14, sy - hu, Math.max(1.5, hu*0.25), hu);
+  c.fillStyle = C.muted; c.fillText('person', sx + sb + 20, sy - 1);
+}
+function renderBest(){
+  const r = cem.best;
+  $('flyBest').disabled = !(r && r.d);
+  if (!r || !r.d){ $('bestStack').innerHTML = ''; $('bestStats').innerHTML = ''; $('bestVerdict').textContent = '–'; drawShape(); return; }
+  const d = r.d, g = r.g;
+  $('bestScore').textContent = `score ${r.score.toFixed(1)}`;
+  const rows = [];
+  if (d.lam.outer) rows.push(['Acid shield', d.lam.outer.long, `${g.tOuter.toFixed(0)} µm`, d.lam.outer.col]);
+  else rows.push(['Acid shield', 'none', '', 'transparent']);
+  if (d.lam.coat) rows.push(['Mirror', d.lam.coat.name, `α ${d.lam.coat.alpha}`, d.lam.coat.col]);
+  if (d.lam.barrier) rows.push(['He barrier', d.lam.barrier.long, `${g.tBarrier.toFixed(0)} µm`, d.lam.barrier.col]);
+  rows.push(['Strength', d.lam.fab.long, `${g.gsm.toFixed(0)} g/m²`, d.lam.fab.cols[1]]);
+  rows.push(['Liner', 'Polyurethane seal coat', `${INNER_PU_GSM} g/m²`, FILMS.PU.col]);
+  $('bestStack').innerHTML = rows.map(([role, name, amt, col]) => `<div class="layer"><span class="sw" style="background:${col}"></span><span class="role">${role}</span><span>${name}</span><span class="amt">${amt}</span></div>`).join('');
+  const stats = [
+    ['Volume', `${Math.round(d.V0).toLocaleString()} m³`], ['Shape', `${d.L.toFixed(0)} × ${d.D.toFixed(0)} m`], ['Mass at Venus', fmtKg(d.mTot)],
+    ['Envelope', fmtKg(d.envKg)], ['Helium', fmtKg(d.mHe)], ['Power + props', fmtKg(d.arrayKg + d.battKg + d.motorKg)],
+    ['Days in band', `${r.useful.toFixed(0)} / ${mission.goal}`], ['Lowest safety factor', isFinite(r.minSF) ? r.minSF.toFixed(2) : '–'], ['Helium lost / year', `${(r.heLeakYr*100).toFixed(1)}%`],
+    ['Floats at', `${d.zT.toFixed(2)} km`], ['Sunlit gas warming', `+${r.superheat0.toFixed(1)}°C`], ['Cruise power', `${(d.propW/1000).toFixed(1)} kW`],
+  ];
+  $('bestStats').innerHTML = stats.map(([k, v]) => `<div><span class="lbl">${k}</span><b>${v}</b></div>`).join('');
+  const v = $('bestVerdict');
+  if (!r.fail){ v.className = 'verdict ok'; v.textContent = `Survives the full ${mission.goal}-day mission${r.minSF < mission.minSF ? `, but its safety factor dips to ${r.minSF.toFixed(2)}` : ''}.`; }
+  else if (r.fail === 'sank'){ v.className = 'verdict bad'; v.textContent = `After ${r.life.toFixed(0)} days it lost enough helium to go slack at night and sank toward the 465°C surface.`; }
+  else if (r.fail === 'burst'){ v.className = 'verdict bad'; v.textContent = `Burst on day ${r.life.toFixed(0)}: the fabric weakened below the daytime pressure load.`; }
+  drawShape();
+}
+function drawTimeline(){
+  const cv = $('timelineCv'), c = cv._ctx, W = cv._w, H = cv._h; if (!W) return;
+  c.clearRect(0, 0, W, H);
+  const rec = cem.bestRec; if (!rec || !rec.series){ return; }
+  const pad = { l:44, r:14, t:14, b:30 }, goal = mission.goal;
+  const X = dd => pad.l + (dd/goal)*(W - pad.l - pad.r), Y = v => pad.t + (1 - clamp(v, 0, 1.15)/1.15)*(H - pad.t - pad.b);
+  c.font = `400 11px ${FONT_MONO}`; c.textAlign = 'right'; c.textBaseline = 'middle';
+  for (const v of [0, 0.25, 0.5, 0.75, 1]){ const y = Y(v); c.strokeStyle = C.line; c.beginPath(); c.moveTo(pad.l, y); c.lineTo(W - pad.r, y); c.stroke(); c.fillStyle = C.muted; c.fillText(`${v*100}%`, pad.l - 6, y); }
+  c.textAlign = 'center'; c.textBaseline = 'top';
+  const tStep = goal > 400 ? 180 : goal > 150 ? 60 : 15;
+  for (let dd = 0; dd <= goal; dd += tStep) c.fillText(dd, X(dd), H - pad.b + 6);
+  c.textAlign = 'right'; c.fillText('days', W - pad.r, H - 13);
+  const s = rec.series;
+  const line = (idx, col, f) => { c.beginPath(); s.forEach((p, i) => { const x = X(p[0]), y = Y(f(p[idx])); i ? c.lineTo(x, y) : c.moveTo(x, y); }); c.strokeStyle = col; c.lineWidth = 1.8; c.stroke(); };
+  line(4, C.warn, v => v/mission.minSF);
+  line(3, C.fg, v => v);
+  if (rec.d.lam.outer) line(2, C.sulfur, v => v);
+  line(1, C.band, v => v);
+  if (rec.fail){
+    const x = X(rec.life); c.strokeStyle = C.warn; c.setLineDash([4, 4]); c.beginPath(); c.moveTo(x, pad.t); c.lineTo(x, H - pad.b); c.stroke(); c.setLineDash([]);
+    c.fillStyle = C.warn; c.textAlign = x > W*0.7 ? 'right' : 'left'; c.textBaseline = 'top';
+    c.fillText(rec.fail === 'sank' ? `sank · day ${rec.life.toFixed(0)}` : `burst · day ${rec.life.toFixed(0)}`, x + (x > W*0.7 ? -6 : 6), pad.t + 2);
+  }
+  $('tlLbl').textContent = rec.fail ? `fails on day ${rec.life.toFixed(0)}` : `all ${goal} days`;
+}
+function drawColumn(){
+  const cv = $('columnCv'), c = cv._ctx, W = cv._w, H = cv._h; if (!W) return;
+  c.clearRect(0, 0, W, H);
+  const pad = { t:14, b:30 }, zTop = 75;
+  const Y = z => pad.t + (1 - z/zTop)*(H - pad.t - pad.b);
+  const barX = 64, barW = 22;
+  for (let z = 0; z < zTop; z += 0.5){
+    const T = Tbase(z), u = clamp((T - 200)/540, 0, 1);
+    const col = u < 0.35 ? mix([70,90,120], [214,172,108], u/0.35) : mix([214,172,108], [235,80,30], (u - 0.35)/0.65);
+    c.fillStyle = rgb(col); c.fillRect(barX, Y(z + 0.5), barW, Y(z) - Y(z + 0.5) + 0.6);
+  }
+  const ax = barX + barW + 6, maxA = 40, aw = Math.max(40, W*0.28);
+  for (let z = 44; z < 75; z += 0.25){
+    const a = aerosol(z); if (a < 0.05) continue;
+    c.fillStyle = `rgba(232,192,90,${0.25 + 0.5*a/maxA})`; c.fillRect(ax, Y(z + 0.25), a/maxA*aw, Y(z) - Y(z + 0.25) + 0.4);
+  }
+  c.font = `400 11px ${FONT_MONO}`; c.textAlign = 'right'; c.textBaseline = 'middle';
+  for (let z = 0; z <= 70; z += 10){ c.fillStyle = C.muted; c.fillText(`${z} km`, barX - 6, Y(z)); }
+  c.textAlign = 'left';
+  [[30, 'clear, hot air · acid vapor'], [46.2, 'lower cloud · 40 mg/m³ · 97%'], [52.4, 'middle cloud · 9 mg/m³ · 90%'], [64, 'upper cloud · 2 mg/m³ · 85%']]
+    .forEach(([z, t]) => { const tw = c.measureText(t).width; c.fillStyle = 'rgba(35,25,18,.85)'; c.fillRect(ax + 2, Y(z) - 7, tw + 6, 14); c.fillStyle = C.muted; c.fillText(t, ax + 5, Y(z)); });
+  c.fillStyle = '#ff9a5c'; c.fillText(`surface · ${fmtT(Tbase(0), 0)} · 92 bar`, barX, H - 12);
+  const tK = F2K(mission.targetF), zt = altForTemp(tK);
+  c.strokeStyle = C.band; c.setLineDash([5, 4]); c.beginPath(); c.moveTo(barX - 4, Y(zt)); c.lineTo(W - 4, Y(zt)); c.stroke(); c.setLineDash([]);
+  c.fillStyle = C.band; c.textAlign = 'right'; c.textBaseline = 'bottom'; c.fillText(`${fmtTarget(mission.targetF)} · ${zt.toFixed(1)} km`, W - 4, Y(zt) - 3);
+  const r = cem.bestRec;
+  if (r && r.d){
+    const lim = [];
+    if (r.d.lam.outer) lim.push([r.d.lam.outer.name, r.d.lam.outer.tmax]);
+    if (r.d.lam.barrier) lim.push([r.d.lam.barrier.name, r.d.lam.barrier.tmax]);
+    lim.push([r.d.lam.fab.name, r.d.lam.fab.tmax]);
+    let lastY = -99;
+    lim.map(([n, t]) => [n, t, altForTemp(t + 273.15)]).sort((p, q) => q[2] - p[2]).forEach(([n, t, z]) => {
+      let y = Y(z); if (y - lastY < 14) y = lastY + 14; lastY = y;
+      c.strokeStyle = C.warn; c.beginPath(); c.moveTo(barX, Y(z)); c.lineTo(barX + barW, Y(z)); c.stroke();
+      c.fillStyle = C.warn; c.textAlign = 'right'; c.textBaseline = 'middle'; c.font = `400 10px ${FONT_MONO}`;
+      c.fillText(`${n} ${unit === 'F' ? Math.round(t*9/5 + 32) + '°F' : t + '°C'}`, W - 4, y);
+    });
+    const zf = r.d.zT, bx = ax + aw + 18, by = Y(zf);
+    c.fillStyle = r.d.lam.coat ? '#d9dde2' : r.d.lam.fab.cols[1];
+    c.beginPath(); c.ellipse(bx, by, 14, 14/Math.max(1, r.d.f)*1.4 + 2, 0, 0, Math.PI*2); c.fill();
+    if (r.fail === 'sank'){
+      c.strokeStyle = C.warn; c.setLineDash([3, 4]); c.beginPath(); c.moveTo(bx, by + 10); c.lineTo(bx, Y(0) - 6); c.stroke(); c.setLineDash([]);
+      c.fillStyle = C.warn; c.beginPath(); c.moveTo(bx - 5, Y(0) - 10); c.lineTo(bx + 5, Y(0) - 10); c.lineTo(bx, Y(0) - 3); c.closePath(); c.fill();
+    }
+  }
+}
+function buildMatTable(){
+  const fmt = v => v < 0.01 ? v.toExponential(0).replace('e-', '×10⁻') : String(v);
+  let h = '<thead><tr><th>Material</th><th>Used as</th><th>Acid evidence</th><th>Acid attack</th><th>He perm. (Barrer)</th><th>Max temp</th><th>Strength</th><th>Notes</th></tr></thead><tbody>';
+  for (const [k, m] of Object.entries(FILMS)){
+    const roles = [OUTER_OPTS.includes(k) ? 'outer' : '', BARRIER_OPTS.includes(k) ? 'barrier' : ''].filter(Boolean).join(', ');
+    h += `<tr><td>${m.long}</td><td>${roles}</td><td>${m.ev ? 'tested or charted' : 'estimate'}</td><td class="num">${fmt(m.acid)} µm/day</td><td class="num">${m.he}</td><td class="num">${m.tmax}°C</td><td class="num">–</td><td class="note">${m.note}</td></tr>`;
+  }
+  for (const m of Object.values(COATS)) h += `<tr><td>${m.name} coating</td><td>mirror</td><td>${m.ev ? 'tested or charted' : 'estimate'}</td><td class="num">${m.acid} µm/day</td><td class="num">cuts leak ÷${m.heFactor}</td><td class="num">–</td><td class="num">–</td><td class="note">${m.note}</td></tr>`;
+  for (const m of Object.values(FABRICS)) h += `<tr><td>${m.long}</td><td>fabric</td><td>${m.ev ? 'tested or charted' : 'estimate'}</td><td class="num">${(m.acid*100).toFixed(1)}%/day</td><td class="num">–</td><td class="num">${m.tmax}°C</td><td class="num">${(m.spec/1e6).toFixed(1)} kJ/g × ${m.creep} creep</td><td class="note">${m.note}</td></tr>`;
+  h += '</tbody>';
+  $('matTable').innerHTML = h;
+}
+function renderLab(){
+  $('labGen').textContent = `Generation ${cem.gen}`;
+  $('labEvals').textContent = `${cem.evals.toLocaleString()} missions simulated${cem.done ? ' · converged' : ''}`;
+  syncLabBtn();
+  renderLearned(); drawLearning(); drawScatter(); renderBest(); drawTimeline(); drawColumn();
+}
+function labTick(){
+  if (labRunning && !cem.done){
+    if (evalSome(cem, mission, 14)) renderLab();
+    $('labProg').style.width = `${(cem.pop.length/cem.popN*100).toFixed(0)}%`;
+    if (cem.done){ labRunning = false; renderLab(); }
+  }
+}
+
+// ================= routing + loop =================
+let view = 'flight';
+function route(){
+  view = location.hash === '#lab' ? 'lab' : 'flight';
+  $('viewFlight').hidden = view !== 'flight'; $('viewLab').hidden = view !== 'lab';
+  $('tabFlight').setAttribute('aria-current', view === 'flight' ? 'page' : 'false');
+  $('tabLab').setAttribute('aria-current', view === 'lab' ? 'page' : 'false');
+  fitAll();
+  if (view === 'lab'){ if (!labStarted){ labStarted = true; startGen(cem); } renderLab(); }
+  else { drawFlightPanels(); updateHud(); drawScene(0); }
+}
+window.addEventListener('hashchange', route);
+new ResizeObserver(() => { fitAll(); if (view === 'lab') renderLab(); else { drawFlightPanels(); drawScene(0); } }).observe(document.body);
+
+let last = performance.now(), frame = 0;
+function tick(now){
+  const dtReal = Math.min(0.1, (now - last)/1000); last = now;
+  if (view === 'flight'){
+    flightTick(dtReal);
+    if (frame % 4 === 0) updateHud();
+    if (frame % 8 === 0) drawFlightPanels();
+  } else labTick();
   frame++;
   requestAnimationFrame(tick);
 }
 
 function start(data){
+  if (data && data.g){ flightG = data.g; FD = designFrom(flightG, data.mission || DEFAULT_MISSION) || FD; }
+  launch(false);
   if (data && data.s){ Object.assign(S, data.s); speed = data.speed || speed; unit = data.unit || unit; }
   autoBox.checked = S.auto; $('weather').checked = S.weather;
   unitBtns.forEach(x => x.setAttribute('aria-pressed', String(x.dataset.unit === unit)));
   $('reset70').textContent = fmtTarget(70);
   $('playBtn').textContent = running ? 'Pause' : 'Resume';
-  syncAuto(); setSpeed(speed); syncTarget();
-  step(S, 0.01); pushHist(); hNext = S.t + HIST_DT; camZ = S.z/1000;
-  updateHud(); drawAllPanels(); drawScene(0);
+  buildMatTable();
+  syncAuto(); setSpeed(speed); syncMission(false); syncTarget();
+  route();
   requestAnimationFrame(t => { last = t; tick(t); });
 }
 const hot = window.claude && window.claude.hot;
-if (hot && hot.snapshot) hot.snapshot(() => ({ s:{ ...S, manual:0 }, speed, unit }));
+if (hot && hot.snapshot) hot.snapshot(() => ({ s:{ ...S, manual:0, heVent:0 }, g:flightG, speed, unit }));
 if (hot && hot.ready) hot.ready(start); else start((hot && hot.data) || {});
 })();
 </script>

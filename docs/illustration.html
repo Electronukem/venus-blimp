@@ -1,0 +1,305 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>VA-01 Illustration</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&family=Saira+Semi+Condensed:wght@600;700&display=swap">
+<style>html,body{margin:0;background:#19120d}canvas{display:block}</style>
+</head><body>
+<!-- Source for docs/venus-blimp.png. Render: open in Chrome at 1600x900 and screenshot. -->
+<canvas id="c" width="1600" height="900"></canvas>
+<script>
+const cv = document.getElementById('c'), c = cv.getContext('2d');
+const W = 1600, H = 900;
+let seed = 7;
+const rnd = () => (seed = (seed*16807) % 2147483647)/2147483647;
+const rgba = (r, g, b, a) => `rgba(${r|0},${g|0},${b|0},${a})`;
+const DISP = '"Saira Semi Condensed", "Arial Narrow", sans-serif', MONO = '"IBM Plex Mono", Consolas, monospace', BODY = '"IBM Plex Sans", "Segoe UI", sans-serif';
+
+function glow(x, y, r, col, a){
+  const g = c.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, rgba(...col, a)); g.addColorStop(.35, rgba(...col, a*.45)); g.addColorStop(1, rgba(...col, 0));
+  c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, Math.PI*2); c.fill();
+}
+function puff(x, y, r, lit, shade, a){
+  let g = c.createRadialGradient(x, y + r*.35, 0, x, y + r*.35, r*1.05);
+  g.addColorStop(0, rgba(...shade, a*.9)); g.addColorStop(1, rgba(...shade, 0));
+  c.fillStyle = g; c.beginPath(); c.arc(x, y + r*.35, r*1.05, 0, Math.PI*2); c.fill();
+  g = c.createRadialGradient(x - r*.25, y - r*.3, 0, x, y, r);
+  g.addColorStop(0, rgba(...lit, a)); g.addColorStop(.6, rgba(...lit, a*.55)); g.addColorStop(1, rgba(...lit, 0));
+  c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, Math.PI*2); c.fill();
+}
+function bank(x0, x1, y, h, rMin, rMax, n, lit, shade, a){
+  for (let i = 0; i < n; i++){
+    const t = rnd(), x = x0 + (x1 - x0)*t;
+    const bulge = Math.sin(t*Math.PI*(2 + rnd()))*h*.35;
+    puff(x, y - Math.abs(bulge) + rnd()*h*.5, rMin + rnd()*(rMax - rMin), lit, shade, a*(.6 + rnd()*.4));
+  }
+}
+
+function sky(){
+  const g = c.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#b7722f'); g.addColorStop(.22, '#d9a35a'); g.addColorStop(.45, '#f0d6a0');
+  g.addColorStop(.62, '#ead09a'); g.addColorStop(.8, '#c9944e'); g.addColorStop(1, '#8f5a2a');
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  // the Sun, diffused through the upper cloud (morning: rising in the west, on the left)
+  glow(250, 150, 900, [255, 236, 190], .55);
+  glow(250, 150, 260, [255, 246, 220], .7);
+  glow(250, 150, 60, [255, 253, 240], .95);
+  // high haze bands
+  for (let i = 0; i < 7; i++){
+    const y = 60 + i*55 + rnd()*20;
+    const g2 = c.createLinearGradient(0, y - 20, 0, y + 20);
+    g2.addColorStop(0, 'rgba(255,240,205,0)'); g2.addColorStop(.5, `rgba(255,240,205,${.07 + rnd()*.08})`); g2.addColorStop(1, 'rgba(255,240,205,0)');
+    c.fillStyle = g2; c.fillRect(0, y - 20, W, 40);
+  }
+}
+function wisps(y0, y1, n, a){
+  for (let i = 0; i < n; i++){
+    const y = y0 + rnd()*(y1 - y0), x = rnd()*W, len = 200 + rnd()*500, th = 6 + rnd()*14;
+    c.save(); c.translate(x, y); c.rotate(-.04 + rnd()*.03);
+    const g = c.createLinearGradient(-len/2, 0, len/2, 0);
+    g.addColorStop(0, 'rgba(255,246,225,0)'); g.addColorStop(.5, `rgba(255,246,225,${a*(.5 + rnd()*.5)})`); g.addColorStop(1, 'rgba(255,246,225,0)');
+    c.fillStyle = g; c.beginPath(); c.ellipse(0, 0, len/2, th, 0, 0, Math.PI*2); c.fill(); c.restore();
+  }
+}
+
+// ---------- the aerostat ----------
+const B = { cx:900, cy:395, a:320, b:124, tilt:-0.035 };
+function envelopePath(){ c.beginPath(); c.ellipse(0, 0, B.a, B.b, 0, 0, Math.PI*2); }
+function fins(front){
+  const { a, b } = B;
+  const finFill = c.createLinearGradient(0, -b*1.7, 0, b*1.7);
+  finFill.addColorStop(0, '#efe4cf'); finFill.addColorStop(.5, '#c9bba2'); finFill.addColorStop(1, '#8d7656');
+  c.fillStyle = finFill;
+  if (!front){
+    c.beginPath(); c.moveTo(-a*.62, -b*.7); c.lineTo(-a*.97, -b*1.62); c.lineTo(-a*1.07, -b*1.56); c.lineTo(-a*1.01, -b*.2); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(-a*.62, b*.7); c.lineTo(-a*.97, b*1.5); c.lineTo(-a*1.07, b*1.44); c.lineTo(-a*1.01, b*.2); c.closePath(); c.fill();
+    c.fillStyle = '#d8893c';
+    c.beginPath(); c.moveTo(-a*.97, -b*1.62); c.lineTo(-a*1.07, -b*1.56); c.lineTo(-a*1.065, -b*1.4); c.lineTo(-a*.93, -b*1.5); c.closePath(); c.fill();
+  } else {
+    // near-side horizontal fin, seen almost edge-on
+    c.fillStyle = finFill;
+    c.beginPath(); c.moveTo(-a*.66, b*.12); c.lineTo(-a*1.1, b*.34); c.lineTo(-a*1.12, b*.46); c.lineTo(-a*.7, b*.36); c.closePath(); c.fill();
+    c.strokeStyle = 'rgba(80,60,40,.35)'; c.lineWidth = 1.2; c.stroke();
+  }
+}
+function envelope(){
+  const { a, b } = B;
+  // mirror skin: reflects the bright sky above and the amber cloud deck below
+  const g = c.createLinearGradient(0, -b, 0, b);
+  g.addColorStop(0, '#b97c3c'); g.addColorStop(.12, '#e2c288'); g.addColorStop(.27, '#fffbf2'); g.addColorStop(.4, '#f1e8d6');
+  g.addColorStop(.455, '#c9b28c'); g.addColorStop(.47, '#8a6a44'); g.addColorStop(.5, '#d8c6a4'); g.addColorStop(.62, '#e7d7b6');
+  g.addColorStop(.8, '#a8763e'); g.addColorStop(1, '#55381a');
+  c.fillStyle = g; envelopePath(); c.fill();
+  c.save(); envelopePath(); c.clip();
+  // reflected clouds in the lower hull
+  seed = 991;
+  for (let i = 0; i < 26; i++) puff(-a + rnd()*2*a, b*.55 + rnd()*b*.4, 20 + rnd()*40, [255, 235, 195], [150, 100, 50], .18);
+  // sun highlight, upper left
+  const h = c.createRadialGradient(-a*.45, -b*.55, 0, -a*.45, -b*.55, a*.75);
+  h.addColorStop(0, 'rgba(255,255,248,.75)'); h.addColorStop(.4, 'rgba(255,250,235,.22)'); h.addColorStop(1, 'rgba(255,250,235,0)');
+  c.fillStyle = h; c.fillRect(-a, -b, 2*a, 2*b);
+  // limb darkening toward nose and tail
+  const l = c.createRadialGradient(-a*.1, -b*.1, b*.6, 0, 0, a*1.05);
+  l.addColorStop(0, 'rgba(60,38,18,0)'); l.addColorStop(.75, 'rgba(60,38,18,.08)'); l.addColorStop(1, 'rgba(60,38,18,.45)');
+  c.fillStyle = l; c.fillRect(-a, -b, 2*a, 2*b);
+  // gore seams
+  c.strokeStyle = 'rgba(95,70,45,.22)'; c.lineWidth = 1.2;
+  for (let k = -7; k <= 7; k++){
+    const x = k*a/8, hh = b*Math.sqrt(1 - (x/a)*(x/a));
+    c.beginPath(); c.ellipse(x, 0, a*.035 + Math.abs(k)*1.5, hh, 0, -Math.PI/2, Math.PI/2); c.stroke();
+  }
+  c.strokeStyle = 'rgba(95,70,45,.16)';
+  c.beginPath(); c.ellipse(0, b*.05, a*.995, b*.08, 0, 0, Math.PI); c.stroke();
+  // solar array across the crown
+  for (let i = 0; i < 22; i++){
+    const x0 = -a*.52 + i*(a*.95/22), x1 = x0 + a*.95/22 - 3;
+    const top = x => -b*Math.sqrt(Math.max(0, 1 - (x/a)*(x/a)));
+    const depth = x => b*.33*Math.sqrt(Math.max(0, 1 - Math.pow((x + a*.05)/(a*.55), 2)));
+    const cg = c.createLinearGradient(0, top(x0), 0, top(x0) + depth(x0));
+    cg.addColorStop(0, '#5f7fae'); cg.addColorStop(.35, '#253c66'); cg.addColorStop(1, '#16233d');
+    c.fillStyle = cg;
+    c.beginPath(); c.moveTo(x0, top(x0) + 3); c.lineTo(x1, top(x1) + 3); c.lineTo(x1, top(x1) + depth(x1)); c.lineTo(x0, top(x0) + depth(x0)); c.closePath(); c.fill();
+    c.strokeStyle = 'rgba(170,200,240,.28)'; c.lineWidth = 1;
+    for (let r = 1; r < 3; r++){ c.beginPath(); c.moveTo(x0, top(x0) + 3 + depth(x0)*r/3); c.lineTo(x1, top(x1) + 3 + depth(x1)*r/3); c.stroke(); }
+  }
+  // orange band near the nose
+  c.fillStyle = '#d8893c';
+  c.beginPath(); c.ellipse(a*.55, 0, a*.045, b, 0, -Math.PI/2, Math.PI/2); c.ellipse(a*.6, 0, a*.04, b, 0, Math.PI/2, -Math.PI/2, true); c.closePath(); c.fill();
+  c.restore();
+  // markings
+  c.save(); c.fillStyle = 'rgba(70,52,34,.78)'; c.font = `700 ${b*.4}px ${DISP}`; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText('VA-01', a*.12, b*.18);
+  c.font = `500 ${b*.13}px ${MONO}`; c.fillStyle = 'rgba(70,52,34,.6)'; c.fillText('VENUS AEROSTAT', a*.12, b*.46); c.restore();
+  // rim light
+  c.strokeStyle = 'rgba(255,245,220,.5)'; c.lineWidth = 2;
+  c.beginPath(); c.ellipse(0, 0, B.a - 1, B.b - 1, 0, Math.PI*1.05, Math.PI*1.65); c.stroke();
+}
+function gondola(){
+  const { a, b } = B;
+  const gy = b + 46, gw = 190, gh = 56;
+  // suspension lines
+  c.strokeStyle = 'rgba(70,52,34,.75)'; c.lineWidth = 1.6;
+  [[-.42, -.46], [-.18, -.22], [.18, .22], [.42, .46]].forEach(([e, g2]) => {
+    const ex = a*e*.55, ey = b*Math.sqrt(1 - Math.pow(ex/a, 2));
+    c.beginPath(); c.moveTo(ex, ey - 2); c.lineTo(gw*g2, gy + 4); c.stroke();
+  });
+  // shadow from the hull
+  glow(0, gy + 6, gw*.8, [70, 45, 20], .25);
+  // body
+  const g = c.createLinearGradient(0, gy, 0, gy + gh);
+  g.addColorStop(0, '#f3ead8'); g.addColorStop(.5, '#cfc2a8'); g.addColorStop(1, '#7d6648');
+  c.fillStyle = g;
+  c.beginPath(); c.moveTo(-gw/2 + 22, gy); c.lineTo(gw/2 - 10, gy); c.quadraticCurveTo(gw/2 + 26, gy + gh*.5, gw/2 - 10, gy + gh);
+  c.lineTo(-gw/2 + 22, gy + gh); c.quadraticCurveTo(-gw/2 - 6, gy + gh*.5, -gw/2 + 22, gy); c.closePath(); c.fill();
+  c.strokeStyle = 'rgba(80,60,40,.4)'; c.lineWidth = 1; c.stroke();
+  // windows
+  for (let k = 0; k < 7; k++){
+    const x = -gw*.34 + k*gw*.11;
+    c.fillStyle = '#2b2620'; c.beginPath(); c.ellipse(x, gy + gh*.42, 7, 9, 0, 0, Math.PI*2); c.fill();
+    glow(x, gy + gh*.42, 16, [255, 196, 120], .45);
+  }
+  // radiator stripe and hatch
+  c.fillStyle = 'rgba(216,137,60,.85)'; c.fillRect(-gw*.42, gy + gh*.74, gw*.84, 4);
+  // high-gain antenna
+  c.save(); c.translate(gw*.36, gy + gh + 10); c.rotate(-.5);
+  c.fillStyle = '#e9e1d0'; c.beginPath(); c.ellipse(0, 0, 18, 7, 0, 0, Math.PI*2); c.fill();
+  c.strokeStyle = '#7d6648'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, -14); c.stroke(); c.restore();
+  // ducted propellers at the stern
+  for (const [px, py, s] of [[-gw/2 - 26, gy + gh*.5, 1], [-gw/2 - 10, gy + gh*.38, .82]]){
+    c.save(); c.translate(px, py); c.scale(s, s);
+    c.fillStyle = 'rgba(90,70,48,.2)'; c.beginPath(); c.ellipse(0, 0, 9, 30, 0, 0, Math.PI*2); c.fill();
+    c.strokeStyle = '#8b765a'; c.lineWidth = 6; c.beginPath(); c.ellipse(0, 0, 10, 31, 0, 0, Math.PI*2); c.stroke();
+    c.strokeStyle = '#efe4cf'; c.lineWidth = 2; c.beginPath(); c.ellipse(-1, -1, 10, 31, 0, Math.PI*1.1, Math.PI*1.7); c.stroke();
+    c.fillStyle = '#5d4a33'; c.beginPath(); c.arc(0, 0, 4, 0, Math.PI*2); c.fill();
+    c.restore();
+  }
+  c.strokeStyle = '#8b765a'; c.lineWidth = 3; c.beginPath(); c.moveTo(-gw/2 - 26, gy + gh*.5); c.lineTo(-gw/2 + 14, gy + gh*.5); c.stroke();
+  // cloud-particle sampler boom
+  c.strokeStyle = '#6e5a40'; c.lineWidth = 2.2;
+  c.beginPath(); c.moveTo(-gw*.05, gy + gh); c.lineTo(-gw*.05, gy + gh + 92); c.stroke();
+  for (const [dy, w2, h2] of [[38, 14, 22], [76, 18, 26]]){
+    const pg = c.createLinearGradient(-w2/2, 0, w2/2, 0);
+    pg.addColorStop(0, '#9c8768'); pg.addColorStop(.5, '#f0e6d2'); pg.addColorStop(1, '#8a7456');
+    c.fillStyle = pg; c.beginPath(); c.ellipse(-gw*.05, gy + gh + dy, w2/2, h2/2, 0, 0, Math.PI*2); c.fill();
+  }
+  glow(-gw*.05, gy + gh + 92, 10, [255, 90, 60], .8);
+  glow(-gw/2 + 22, gy + gh*.9, 9, [255, 70, 50], .8);
+  return { gy, gw, gh };
+}
+
+// ---------- labels ----------
+function label(text, sub, tx, ty, px, py, align){
+  c.font = `500 15px ${MONO}`; const w1 = c.measureText(text).width;
+  c.font = `400 13px ${BODY}`; const w2 = sub ? c.measureText(sub).width : 0;
+  const w = Math.max(w1, w2) + 22, h = sub ? 48 : 30;
+  const x = align === 'right' ? tx - w : tx;
+  c.strokeStyle = 'rgba(30,20,12,.75)'; c.lineWidth = 1.5;
+  c.beginPath(); c.moveTo(px, py); c.lineTo(align === 'right' ? x + w : x, ty + h/2); c.stroke();
+  c.fillStyle = '#2b1f16'; c.beginPath(); c.arc(px, py, 4.5, 0, Math.PI*2); c.fill();
+  c.fillStyle = '#f2e7d3'; c.beginPath(); c.arc(px, py, 2.2, 0, Math.PI*2); c.fill();
+  c.fillStyle = 'rgba(25,18,13,.82)'; roundRect(x, ty, w, h, 8); c.fill();
+  c.fillStyle = '#f2e7d3'; c.font = `500 15px ${MONO}`; c.textAlign = 'left'; c.textBaseline = 'top';
+  c.fillText(text, x + 11, ty + 7);
+  if (sub){ c.fillStyle = '#c9b597'; c.font = `400 13px ${BODY}`; c.fillText(sub, x + 11, ty + 27); }
+}
+function roundRect(x, y, w, h, r){ c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
+
+function cutaway(){
+  const x = 40, y = 560, w = 470, h = 300;
+  c.fillStyle = 'rgba(25,18,13,.84)'; roundRect(x, y, w, h, 14); c.fill();
+  c.strokeStyle = 'rgba(232,192,90,.35)'; c.lineWidth = 1; c.stroke();
+  c.fillStyle = '#e8c05a'; c.font = `500 12px ${MONO}`; c.textAlign = 'left'; c.textBaseline = 'top';
+  c.fillText('ENVELOPE WALL · OUTSIDE → INSIDE', x + 20, y + 18);
+  const layers = [
+    ['#e9eef0', 14, 'FEP Teflon', '20 µm · acid shield'],
+    ['#e3e5ea', 5,  'Silver coating', '0.1 µm · sunlight mirror'],
+    ['#dfe9ee', 12, 'PCTFE (Aclar)', '15 µm · helium barrier'],
+    ['#d4ad66', 26, 'Vectran fabric', '150 g/m² · carries the pressure'],
+    ['#d9cfb8', 10, 'Polyurethane', 'seals the seams'],
+  ];
+  const sx = x + 26, sw = 150, sk = 22, row = 46;
+  layers.forEach(([col, t, name, note], i) => {
+    // an isometric slab per row, so the labels never collide
+    const depth = t, top = y + 50 + i*row + (row - sk - depth)/2;
+    c.fillStyle = col; c.beginPath(); c.moveTo(sx, top + sk); c.lineTo(sx + sw, top); c.lineTo(sx + sw, top + depth); c.lineTo(sx, top + sk + depth); c.closePath(); c.fill();
+    c.fillStyle = 'rgba(0,0,0,.18)'; c.beginPath(); c.moveTo(sx, top + sk + depth*.55); c.lineTo(sx + sw, top + depth*.55); c.lineTo(sx + sw, top + depth); c.lineTo(sx, top + sk + depth); c.closePath(); c.fill();
+    if (i === 1){ c.fillStyle = 'rgba(255,255,255,.7)'; c.fillRect(sx + sw*.2, top + sk*.8 - 2, sw*.5, 1.5); }
+    if (i === 3){
+      c.strokeStyle = 'rgba(120,85,40,.55)'; c.lineWidth = 1;
+      for (let k = 1; k < 14; k++){ const xx = sx + k*sw/14; const yt = top + sk*(1 - k/14); c.beginPath(); c.moveTo(xx, yt + 2); c.lineTo(xx, yt + depth - 2); c.stroke(); }
+    }
+    const ly = y + 50 + i*row + row/2;
+    c.strokeStyle = 'rgba(242,231,211,.35)'; c.beginPath(); c.moveTo(sx + sw + 8, ly); c.lineTo(sx + sw + 30, ly); c.stroke();
+    c.fillStyle = '#f2e7d3'; c.font = `500 15px ${BODY}`; c.textBaseline = 'middle'; c.fillText(name, sx + sw + 38, ly - 8);
+    c.fillStyle = '#b29d82'; c.font = `400 12px ${MONO}`; c.fillText(note, sx + sw + 38, ly + 10);
+  });
+  return { x, y, w, h };
+}
+
+function droplets(){
+  seed = 4242;
+  for (let i = 0; i < 520; i++){
+    const x = rnd()*W, y = rnd()*H, s = rnd();
+    c.fillStyle = `rgba(255,244,210,${.18 + s*.4})`;
+    c.fillRect(x, y, .8 + s*1.4, 2 + s*4);
+  }
+  // a few out-of-focus droplets close to the camera
+  for (let i = 0; i < 11; i++){
+    const x = rnd()*W, y = rnd()*H*.9, r = 10 + rnd()*26;
+    const g = c.createRadialGradient(x, y, r*.6, x, y, r);
+    g.addColorStop(0, 'rgba(255,246,220,.07)'); g.addColorStop(.85, 'rgba(255,246,220,.16)'); g.addColorStop(1, 'rgba(255,246,220,0)');
+    c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, Math.PI*2); c.fill();
+  }
+}
+
+function titleBlock(){
+  const x = W - 48;
+  c.textAlign = 'right'; c.textBaseline = 'alphabetic';
+  c.shadowColor = 'rgba(60,30,10,.45)'; c.shadowBlur = 18;
+  c.fillStyle = '#2a1a0e'; c.font = `500 15px ${MONO}`; c.fillText('VENUS · 55.9 KM · 70°F · 0.45 BAR', x, 66);
+  c.font = `700 92px ${DISP}`; c.fillStyle = '#25170c'; c.fillText('VA-01', x, 150);
+  c.font = `500 20px ${BODY}`; c.fillStyle = '#3a2614';
+  c.fillText('Helium aerostat in the middle cloud deck,', x, 186);
+  c.fillText('drifting west at 61 m/s through 90% sulfuric acid', x, 212);
+  c.shadowBlur = 0;
+}
+
+function paint(){
+  seed = 7;
+  sky();
+  wisps(120, 330, 26, .22);
+  // distant cloud towers on the horizon
+  seed = 21; bank(-50, W + 50, 560, 70, 30, 70, 120, [255, 238, 205], [196, 150, 96], .55);
+  seed = 33; bank(-50, 620, 640, 90, 40, 95, 70, [255, 236, 200], [176, 124, 70], .7);
+  seed = 34; bank(980, W + 60, 650, 90, 40, 100, 70, [255, 236, 200], [176, 124, 70], .7);
+  // the aerostat
+  c.save(); c.translate(B.cx, B.cy); c.rotate(B.tilt);
+  fins(false); gondola(); envelope(); fins(true);
+  c.restore();
+  // translucent wisp drifting in front of the tail
+  seed = 77; c.save(); c.globalAlpha = .55; wisps(470, 520, 4, .5); c.restore();
+  // the foreground cloud deck: the top of the middle cloud
+  seed = 55; bank(-80, W + 80, 780, 120, 60, 140, 140, [255, 240, 210], [160, 104, 52], .85);
+  seed = 56; bank(-80, W + 80, 860, 80, 70, 150, 90, [250, 226, 186], [130, 82, 40], .9);
+  droplets();
+  // labels
+  const ang = B.tilt, rot = (x, y) => [B.cx + x*Math.cos(ang) - y*Math.sin(ang), B.cy + x*Math.sin(ang) + y*Math.cos(ang)];
+  let p = rot(B.a*.72, -B.b*.55); label('Silver-coated Teflon skin', 'reflects sunlight, shrugs off the acid', 1210, 250, p[0], p[1], 'left');
+  p = rot(-B.a*.1, -B.b*.92); label('Solar array, ~100 m²', 'powers ~80-hour nights via batteries', 520, 160, p[0], p[1], 'right');
+  p = rot(B.a*.25, B.b + 60); label('Gondola', 'science, avionics, 50 kWh battery', 1180, 560, p[0], p[1], 'left');
+  p = rot(-95 - 26, B.b + 46 + 28); label('Electric props', '8 m/s cruise, daytime only', 520, 470, p[0], p[1], 'right');
+  p = rot(-9.5, B.b + 46 + 56 + 76); label('Cloud-particle sampler', null, 1080, 660, p[0], p[1], 'left');
+  cutaway();
+  titleBlock();
+  // footer note
+  c.fillStyle = 'rgba(25,18,13,.78)'; roundRect(W - 560, H - 58, 520, 34, 8); c.fill();
+  c.fillStyle = '#c9b597'; c.font = `400 13px ${MONO}`; c.textAlign = 'right'; c.textBaseline = 'middle';
+  c.fillText('33 m long · 13 m wide · ~3,000 m³ · design from the sim’s optimizer', W - 54, H - 41);
+  // soft vignette
+  const v = c.createRadialGradient(W/2, H/2, H*.45, W/2, H/2, W*.72);
+  v.addColorStop(0, 'rgba(40,20,8,0)'); v.addColorStop(1, 'rgba(40,20,8,.35)');
+  c.fillStyle = v; c.fillRect(0, 0, W, H);
+}
+(document.fonts && document.fonts.ready ? Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 2500))]) : Promise.resolve()).then(paint);
+</script>
+</body></html>
